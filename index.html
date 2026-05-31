@@ -1,61 +1,698 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ARFOOD.STUDIO</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@200;400;600&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --orange: #FF6A00;
+      --orange-dim: #FF6A0040;
+      --black: #000000;
+      --dark: #0A0A0A;
+      --white: #FFFFFF;
+      --cream: #F5F0E8;
+      --grey: #333333;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      background: #000;
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* LOADER */
+    .loader {
+      position: fixed;
+      inset: 0;
+      background: var(--black);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      font-family: 'Helvetica Neue', sans-serif;
+      z-index: 100;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
     }
-    h1 {
-      color: #ff6a00;
-      font-size: 22px;
-      letter-spacing: 4px;
-      margin-bottom: 8px;
-      text-align: center;
+
+    .loader.hidden {
+      opacity: 0;
+      visibility: hidden;
     }
-    p {
-      color: #ffffff60;
-      font-size: 12px;
-      letter-spacing: 2px;
-      margin-bottom: 24px;
-      text-align: center;
+
+    .loader-logo {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      font-size: 18px;
+      letter-spacing: 6px;
+      color: var(--orange);
+      margin-bottom: 32px;
     }
-    model-viewer {
-      width: 100vw;
-      height: 70vh;
-      background: transparent;
+
+    .loader-bar {
+      width: 120px;
+      height: 1px;
+      background: var(--grey);
+      position: relative;
+      overflow: hidden;
     }
-    .tagline {
-      color: #ffffff40;
-      font-size: 10px;
+
+    .loader-bar::after {
+      content: '';
+      position: absolute;
+      left: -100%;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--orange);
+      animation: load 1.5s ease forwards;
+    }
+
+    @keyframes load {
+      to { left: 0; }
+    }
+
+    /* HEADER */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+    }
+
+    .logo {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 5px;
+      color: var(--orange);
+      text-decoration: none;
+    }
+
+    .header-tag {
+      font-size: 9px;
       letter-spacing: 3px;
-      margin-top: 16px;
+      color: rgba(255,255,255,0.3);
+      font-weight: 200;
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 24px 40px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(255,106,0,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-size: 9px;
+      letter-spacing: 4px;
+      color: var(--orange);
+      font-weight: 400;
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 1.8s forwards;
+    }
+
+    .hero-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(42px, 10vw, 72px);
+      font-weight: 300;
+      line-height: 1.1;
+      letter-spacing: -1px;
+      color: var(--white);
+      margin-bottom: 8px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 2s forwards;
+    }
+
+    .hero-title span {
+      color: var(--orange);
+      font-style: italic;
+    }
+
+    .hero-subtitle {
+      font-size: 9px;
+      letter-spacing: 6px;
+      color: rgba(255,255,255,0.3);
+      font-weight: 200;
+      margin-bottom: 48px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 2.2s forwards;
+    }
+
+    /* MODEL VIEWER */
+    .model-container {
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      opacity: 0;
+      animation: fadeUp 1s ease 2.4s forwards;
+    }
+
+    .model-container::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--orange-dim), transparent);
+    }
+
+    model-viewer {
+      width: 100%;
+      height: 55vw;
+      max-height: 320px;
+      background: transparent;
+      --poster-color: transparent;
+    }
+
+    .ar-button-container {
+      margin-top: 24px;
+      opacity: 0;
+      animation: fadeUp 0.8s ease 2.8s forwards;
+    }
+
+    .ar-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 32px;
+      border: 1px solid var(--orange);
+      color: var(--orange);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      letter-spacing: 4px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      background: transparent;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ar-cta::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--orange);
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+      z-index: -1;
+    }
+
+    .ar-cta:hover::before {
+      transform: translateX(0);
+    }
+
+    .ar-cta:hover {
+      color: var(--black);
+    }
+
+    .ar-icon {
+      width: 16px;
+      height: 16px;
+      border: 1.5px solid currentColor;
+      border-radius: 3px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .ar-icon::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: currentColor;
+      border-radius: 50%;
+    }
+
+    /* DIVIDER */
+    .divider {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, transparent, var(--orange-dim), transparent);
+      margin: 48px auto;
+    }
+
+    /* STATS */
+    .stats {
+      padding: 0 24px 60px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .stat-item {
+      background: var(--black);
+      padding: 28px 20px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 36px;
+      font-weight: 300;
+      color: var(--orange);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 8px;
+      letter-spacing: 3px;
+      color: rgba(255,255,255,0.3);
+      font-weight: 200;
+    }
+
+    /* STATEMENT SECTION */
+    .statement {
+      padding: 60px 24px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .statement-text {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(28px, 7vw, 48px);
+      font-weight: 300;
+      line-height: 1.3;
+      color: var(--cream);
+      margin-bottom: 16px;
+    }
+
+    .statement-text em {
+      color: var(--orange);
+      font-style: italic;
+    }
+
+    .statement-sub {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: rgba(255,255,255,0.2);
+      font-weight: 200;
+    }
+
+    /* HOW IT WORKS */
+    .how {
+      padding: 60px 24px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .section-label {
+      font-size: 8px;
+      letter-spacing: 4px;
+      color: var(--orange);
+      font-weight: 400;
+      margin-bottom: 40px;
+      text-align: center;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 24px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .step:last-child {
+      border-bottom: none;
+    }
+
+    .step-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 40px;
+      font-weight: 300;
+      color: rgba(255,106,0,0.2);
+      line-height: 1;
+      min-width: 48px;
+    }
+
+    .step-content {}
+
+    .step-title {
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--white);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .step-desc {
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      font-weight: 200;
+      line-height: 1.6;
+      letter-spacing: 0.5px;
+    }
+
+    /* SCARCITY */
+    .scarcity {
+      margin: 0 24px 60px;
+      padding: 32px 24px;
+      border: 1px solid rgba(255,106,0,0.2);
+      position: relative;
+      text-align: center;
+    }
+
+    .scarcity::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 24px;
+      right: 24px;
+      height: 1px;
+      background: var(--orange);
+    }
+
+    .scarcity-tag {
+      font-size: 8px;
+      letter-spacing: 4px;
+      color: var(--orange);
+      font-weight: 400;
+      margin-bottom: 16px;
+    }
+
+    .scarcity-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      color: var(--white);
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .scarcity-sub {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.3);
+      font-weight: 200;
+      margin-bottom: 24px;
+    }
+
+    .scarcity-spots {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .spot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--orange);
+    }
+
+    .spot.taken {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* CTA */
+    .cta-section {
+      padding: 60px 24px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .cta-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 32px;
+      font-weight: 300;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .cta-sub {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: rgba(255,255,255,0.2);
+      margin-bottom: 32px;
+    }
+
+    .cta-btn {
+      display: inline-block;
+      padding: 16px 40px;
+      background: var(--orange);
+      color: var(--black);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      letter-spacing: 4px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .cta-btn:hover {
+      opacity: 0.85;
+    }
+
+    /* FOOTER */
+    footer {
+      padding: 32px 24px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-logo {
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: var(--orange);
+      font-weight: 600;
+    }
+
+    .footer-tag {
+      font-size: 8px;
+      letter-spacing: 2px;
+      color: rgba(255,255,255,0.15);
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* AR BUTTON OVERRIDE */
+    model-viewer::part(default-ar-button) {
+      display: none;
+    }
+
+    #ar-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 32px;
+      border: 1px solid var(--orange);
+      color: var(--orange);
+      font-family: 'Montserrat', sans-serif;
+      font-size: 10px;
+      letter-spacing: 4px;
+      font-weight: 600;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    #ar-trigger:hover {
+      background: var(--orange);
+      color: var(--black);
     }
   </style>
 </head>
 <body>
-  <h1>ARFOOD.STUDIO</h1>
-  <p>SCAN. WATCH. CRAVE.</p>
-  <model-viewer
-    src="burger.glb"
-    ar
-    ar-modes="webxr scene-viewer quick-look"
-    camera-controls
-    auto-rotate
-   scale="0.5 0.5 0.5"
-    shadow-intensity="1"
-    alt="AR Burger Experience">
-  </model-viewer>
-  <div class="tagline">THE FUTURE OF DINING</div>
+
+  <!-- LOADER -->
+  <div class="loader" id="loader">
+    <div class="loader-logo">ARFOOD.STUDIO</div>
+    <div class="loader-bar"></div>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">ARFOOD.STUDIO</div>
+    <div class="header-tag">PATIALA · INDIA</div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow">AUGMENTED REALITY FOOD EXPERIENCE</div>
+    <h1 class="hero-title">The Future of<br><span>Dining</span><br>is Here.</h1>
+    <div class="hero-subtitle">SCAN. WATCH. CRAVE.</div>
+
+    <div class="model-container">
+      <model-viewer
+        id="burger-viewer"
+        src="burger.glb"
+        ar
+        ar-modes="webxr scene-viewer quick-look"
+        camera-controls
+        auto-rotate
+        auto-rotate-delay="0"
+        rotation-per-second="20deg"
+        scale="0.5 0.5 0.5"
+        shadow-intensity="0.5"
+        exposure="1"
+        alt="AR Burger Experience">
+      </model-viewer>
+    </div>
+
+    <div class="ar-button-container">
+      <button id="ar-trigger" onclick="document.getElementById('burger-viewer').activateAR()">
+        <div class="ar-icon"></div>
+        VIEW IN YOUR SPACE
+      </button>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat-item">
+      <div class="stat-number">3D</div>
+      <div class="stat-label">REAL SPACE AR</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">0</div>
+      <div class="stat-label">APP DOWNLOAD</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">QR</div>
+      <div class="stat-label">INSTANT ACCESS</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">∞</div>
+      <div class="stat-label">IMPRESSIONS</div>
+    </div>
+  </div>
+
+  <!-- STATEMENT -->
+  <section class="statement">
+    <p class="statement-text">
+      Your guests decide<br>
+      <em>before</em> the plate arrives.
+    </p>
+    <div class="statement-sub">ARFOOD.STUDIO CHANGES THAT MOMENT</div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how">
+    <div class="section-label">HOW IT WORKS</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <div class="step-title">SCAN</div>
+          <div class="step-desc">Customer scans QR code on your menu. No app. No download. Instant.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <div class="step-title">WATCH</div>
+          <div class="step-desc">Your food appears in 3D on their table in real space. Photorealistic.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <div class="step-title">CRAVE</div>
+          <div class="step-desc">They record it. Share it. Order more. Your restaurant goes viral.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCARCITY -->
+  <div class="scarcity">
+    <div class="scarcity-tag">LIMITED AVAILABILITY · PATIALA</div>
+    <div class="scarcity-title">Only 3 restaurants.<br>This city. This month.</div>
+    <div class="scarcity-sub">SPOTS REMAINING</div>
+    <div class="scarcity-spots">
+      <div class="spot"></div>
+      <div class="spot"></div>
+      <div class="spot"></div>
+      <div class="spot taken"></div>
+      <div class="spot taken"></div>
+    </div>
+    <div class="statement-sub">THAT IS INTENTIONAL.</div>
+  </div>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-title">Ready to be first?</div>
+    <div class="cta-sub">DM US ON INSTAGRAM TO BE CONSIDERED</div>
+    <a href="https://instagram.com/arfood.studio" class="cta-btn">GET IN TOUCH</a>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">ARFOOD.STUDIO</div>
+    <div class="footer-tag">PATIALA · INDIA · 2025</div>
+  </footer>
+
+  <script>
+    // Loader
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('loader').classList.add('hidden');
+      }, 1800);
+    });
+  </script>
+
 </body>
 </html>
