@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARFOOD.STUDIO — Owner Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, push, set, remove, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ─── REPLACE WITH YOUR FIREBASE CONFIG ───
+  const firebaseConfig = {
+    apiKey: "AIzaSyC5aHBAcGjWer--TdB0JP0t2aZrWATPrjI",
+    authDomain: "arfood-studio.firebaseapp.com",
+    databaseURL: "https://arfood-studio-default-rtdb.firebaseio.com",
+    projectId: "arfood-studio",
+    storageBucket: "arfood-studio.firebasestorage.app",
+    messagingSenderId: "867966775215",
+    appId: "1:867966775215:web:cdf8532d0976f3125ec95a"
+  };
+  // ─────────────────────────────────────────
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // ── ACTIVE FILTER (days: 1=today, 7, 14, 30, 0=custom) ──
+  let activeFilter = 7;
+  let customFrom = null;
+  let customTo = null;
+  let allScans = [];
+  let allViews = [];
+  let allSessions = [];
+  let allARTaps = [];
+
+  // ── MIDNIGHT RESET ──
+  function scheduleReset() {
+    const now = new Date();
+    const nextMidnight = new Date(now);
+    nextMidnight.setHours(24, 0, 0, 0);
+    const msUntilMidnight = nextMidnight - now;
+    setTimeout(() => {
+      resetTodayStats();
+      scheduleReset(); // schedule next day
+    }, msUntilMidnight);
+  }
+
+  async function resetTodayStats() {
+    const today = new Date().toDateString();
+    // Remove today's scans, views, sessions, ar_taps from Firebase
+    for (const path of ['scans','views','sessions','ar_taps']) {
+      const snap = await get(ref(db, path));
+      if (!snap.exists()) continue;
+      snap.forEach(child => {
+        const d = child.val();
+        if (d && d.day === today) remove(ref(db, `${path}/${child.key}`));
+      });
+    }
+  }
+
+  // ── MANUAL RESET ──
+  window.confirmReset = function() {
+    document.getElementById('resetModal').style.display = 'flex';
+  };
+  window.cancelReset = function() {
+    document.getElementById('resetModal').style.display = 'none';
+  };
+  window.doReset = async function() {
+    document.getElementById('resetModal').style.display = 'none';
+    document.getElementById('resetBtn').textContent = 'RESETTING...';
+    for (const path of ['scans','views','sessions','ar_taps']) {
+      await remove(ref(db, path));
+    }
+    document.getElementById('resetBtn').textContent = 'RESET DONE';
+    setTimeout(() => document.getElementById('resetBtn').textContent = 'RESET ALL DATA', 2000);
+  };
+
+  // ── FILTER BUTTONS ──
+  window.setFilter = function(days) {
+    activeFilter = days;
+    customFrom = null;
+    customTo = null;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('filter-' + days).classList.add('active');
+    document.getElementById('customRange').style.display = 'none';
+    renderAll();
+  };
+
+  window.showCustom = function() {
+    activeFilter = 0;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('filter-custom').classList.add('active');
+    document.getElementById('customRange').style.display = 'flex';
+  };
+
+  window.applyCustom = function() {
+    const from = document.getElementById('customFrom').value;
+    const to = document.getElementById('customTo').value;
+    if (!from || !to) return;
+    customFrom = new Date(from);
+    customTo = new Date(to);
+    customTo.setHours(23,59,59,999);
+    renderAll();
+  };
+
+  function inRange(timestamp) {
+    const d = new Date(timestamp);
+    if (activeFilter === 0 && customFrom && customTo) {
+      return d >= customFrom && d <= customTo;
+    }
+    if (activeFilter === 1) {
+      return new Date(timestamp).toDateString() === new Date().toDateString();
+    }
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - activeFilter);
+    return d >= cutoff;
+  }
+
+  function filterData(arr) {
+    return arr.filter(item => item.timestamp && inRange(item.timestamp));
+  }
+
+  // ── LOAD DATA ──
+  function loadAll() {
+    loadRef('scans', d => { allScans = d; renderAll(); });
+    loadRef('views', d => { allViews = d; renderAll(); });
+    loadRef('sessions', d => { allSessions = d; renderAll(); });
+    loadRef('ar_taps', d => { allARTaps = d; renderAll(); });
+  }
+
+  function loadRef(path, cb) {
+    onValue(ref(db, path), snap => {
+      const arr = [];
+      snap.forEach(child => arr.push(child.val()));
+      cb(arr);
+    });
+  }
+
+  // ── RENDER ALL ──
+  function renderAll() {
+    const scans = filterData(allScans);
+    const views = filterData(allViews);
+    const sessions = filterData(allSessions);
+    const arTaps = filterData(allARTaps);
+
+    // Stats
+    animateCount('totalScans', scans.length);
+    animateCount('totalViews', views.length);
+    animateCount('totalAR', arTaps.length);
+
+    // Today scans
+    const todayCount = allScans.filter(s => s.timestamp && new Date(s.timestamp).toDateString() === new Date().toDateString()).length;
+    animateCount('todayScans', todayCount);
+
+    // Avg session time
+    const withDuration = sessions.filter(s => s.duration > 0);
+    const avgTime = withDuration.length
+      ? Math.round(withDuration.reduce((a,b) => a + b.duration, 0) / withDuration.length)
+      : 0;
+    document.getElementById('avgTime').textContent = avgTime + 's';
+
+    // Top dish
+    const dishCount = {};
+    views.forEach(v => { if(v.dish) dishCount[v.dish] = (dishCount[v.dish]||0)+1; });
+    const top = Object.keys(dishCount).sort((a,b)=>dishCount[b]-dishCount[a])[0] || '—';
+    document.getElementById('topDish').textContent = top;
+
+    // Charts
+    renderHourChart(scans);
+    renderDishBars(views, sessions);
+    renderDayChart(scans);
+  }
+
+  // ── HOUR CHART ──
+  function renderHourChart(scans) {
+    const chart = document.getElementById('hourChart');
+    if (!chart) return;
+    chart.innerHTML = '';
+    const hourCounts = Array(24).fill(0);
+    scans.forEach(s => { if(s.hour !== undefined) hourCounts[s.hour]++; });
+    const max = Math.max(...hourCounts, 1);
+    const peak = hourCounts.indexOf(Math.max(...hourCounts));
+
+    hourCounts.forEach((count, h) => {
+      const bar = document.createElement('div');
+      bar.className = 'hour-bar';
+      const fill = document.createElement('div');
+      fill.className = 'hour-fill' + (h === peak ? ' peak' : '');
+      fill.style.height = `${(count/max)*100}%`;
+      fill.title = `${fmtHour(h)}: ${count}`;
+      const lbl = document.createElement('span');
+      lbl.className = 'hour-label';
+      lbl.textContent = (h % 6 === 0) ? fmtHour(h) : '';
+      bar.appendChild(fill);
+      bar.appendChild(lbl);
+      chart.appendChild(bar);
+    });
+
+    document.getElementById('peakHour').textContent = fmtHour(peak);
+  }
+
+  // ── DAY TREND CHART ──
+  function renderDayChart(scans) {
+    const chart = document.getElementById('dayChart');
+    if (!chart) return;
+    chart.innerHTML = '';
+
+    const days = activeFilter === 1 ? 1 : activeFilter === 0 ? 30 : activeFilter;
+    const dayCounts = {};
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dayCounts[d.toDateString()] = 0;
+    }
+    scans.forEach(s => {
+      if (s.timestamp) {
+        const key = new Date(s.timestamp).toDateString();
+        if (dayCounts[key] !== undefined) dayCounts[key]++;
+      }
+    });
+
+    const keys = Object.keys(dayCounts);
+    const vals = keys.map(k => dayCounts[k]);
+    const max = Math.max(...vals, 1);
+
+    keys.forEach((key, i) => {
+      const bar = document.createElement('div');
+      bar.className = 'day-bar';
+      const fill = document.createElement('div');
+      fill.className = 'day-fill';
+      fill.style.height = `${(vals[i]/max)*100}%`;
+      fill.title = `${key}: ${vals[i]} scans`;
+      const lbl = document.createElement('span');
+      lbl.className = 'day-label';
+      const d = new Date(key);
+      lbl.textContent = keys.length <= 7
+        ? d.toLocaleDateString('en',{weekday:'short'})
+        : (i % Math.ceil(keys.length/7) === 0 ? d.getDate() : '');
+      bar.appendChild(fill);
+      bar.appendChild(lbl);
+      chart.appendChild(bar);
+    });
+  }
+
+  // ── DISH BARS ──
+  function renderDishBars(views, sessions) {
+    const container = document.getElementById('dishList');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const dishViews = {};
+    const dishTime = {};
+    const dishAR = {};
+
+    views.forEach(v => {
+      if (!v.dish) return;
+      dishViews[v.dish] = (dishViews[v.dish]||0) + 1;
+    });
+    sessions.forEach(s => {
+      if (!s.dish || !s.duration) return;
+      dishTime[s.dish] = (dishTime[s.dish]||0) + s.duration;
+    });
+    allARTaps.filter(t => inRange(t.timestamp)).forEach(t => {
+      if (!t.dish) return;
+      dishAR[t.dish] = (dishAR[t.dish]||0) + 1;
+    });
+
+    const dishes = Object.keys(dishViews);
+    if (!dishes.length) {
+      container.innerHTML = '<p class="no-data">No dish views yet.</p>';
+      return;
+    }
+
+    const maxV = Math.max(...dishes.map(d => dishViews[d]), 1);
+    dishes.sort((a,b) => dishViews[b] - dishViews[a]).forEach((dish, i) => {
+      const count = dishViews[dish];
+      const viewCount = sessions.filter(s => s.dish === dish && s.duration > 0).length;
+      const avg = viewCount ? Math.round(dishTime[dish] / viewCount) : 0;
+      const ar = dishAR[dish] || 0;
+      const pct = Math.round((count/maxV)*100);
+
+      const row = document.createElement('div');
+      row.className = 'dish-row';
+      row.style.animationDelay = `${i*0.08}s`;
+      row.innerHTML = `
+        <div class="dish-info">
+          <span class="dish-name">${dish}</span>
+          <span class="dish-meta">${count} views · avg ${avg}s · ${ar} AR taps</span>
+        </div>
+        <div class="dish-bar-wrap"><div class="dish-bar-fill" style="width:${pct}%"></div></div>
+        <span class="dish-count">${count}</span>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function animateCount(id, target) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let cur = 0;
+    const step = Math.max(1, Math.ceil(target/40));
+    clearInterval(el._timer);
+    el._timer = setInterval(() => {
+      cur = Math.min(cur + step, target);
+      el.textContent = cur.toLocaleString();
+      if (cur >= target) clearInterval(el._timer);
+    }, 25);
+  }
+
+  function fmtHour(h) {
+    const s = h >= 12 ? 'PM' : 'AM';
+    return `${h%12||12}${s}`;
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadAll();
+    scheduleReset();
+    // Set default filter active
+    document.getElementById('filter-7').classList.add('active');
+  });
+</script>
+
+<style>
+  :root {
+    --black: #000;
+    --orange: #FF6A00;
+    --orange-dim: rgba(255,106,0,0.12);
+    --orange-glow: rgba(255,106,0,0.35);
+    --card: #0a0a0a;
+    --border: rgba(255,106,0,0.15);
+    --grey: #666;
+    --white: #fff;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Montserrat', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(255,106,0,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,106,0,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none; z-index:0;
+  }
+
+  /* HEADER */
+  header {
+    position:sticky; top:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px;
+    background:rgba(0,0,0,0.94);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+  }
+  .logo { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:3px; }
+  .logo span { color:var(--orange); }
+  .live-badge { display:flex; align-items:center; gap:7px; font-family:'DM Mono',monospace; font-size:10px; color:var(--grey); letter-spacing:1px; }
+  .pulse { width:7px; height:7px; background:var(--orange); border-radius:50%; animation:pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.3;transform:scale(0.65);} }
+
+  /* MAIN */
+  main { position:relative; z-index:1; padding:24px 16px 60px; max-width:860px; margin:0 auto; }
+
+  /* FILTER BAR */
+  .filter-bar {
+    display:flex; gap:8px; flex-wrap:wrap;
+    margin-bottom:24px; align-items:center;
+  }
+  .filter-btn {
+    padding:7px 14px;
+    background:transparent;
+    border:1px solid rgba(255,255,255,0.1);
+    color:var(--grey);
+    font-family:'DM Mono',monospace;
+    font-size:10px; letter-spacing:1px;
+    cursor:pointer; border-radius:4px;
+    transition:all 0.2s;
+  }
+  .filter-btn:hover { border-color:var(--orange); color:var(--orange); }
+  .filter-btn.active { background:var(--orange); border-color:var(--orange); color:#000; font-weight:700; }
+
+  .custom-range {
+    display:none; gap:8px; align-items:center;
+    flex-wrap:wrap; margin-top:10px;
+  }
+  .custom-range input[type="date"] {
+    background:#111; border:1px solid var(--border);
+    color:var(--white); padding:7px 10px;
+    font-family:'DM Mono',monospace; font-size:10px;
+    border-radius:4px; cursor:pointer;
+  }
+  .apply-btn {
+    padding:7px 16px; background:var(--orange); color:#000;
+    border:none; font-family:'DM Mono',monospace;
+    font-size:10px; letter-spacing:1px; font-weight:700;
+    cursor:pointer; border-radius:4px;
+  }
+
+  /* RESET BUTTON */
+  .reset-btn {
+    margin-left:auto;
+    padding:7px 14px;
+    background:transparent;
+    border:1px solid rgba(255,60,60,0.3);
+    color:rgba(255,80,80,0.7);
+    font-family:'DM Mono',monospace;
+    font-size:10px; letter-spacing:1px;
+    cursor:pointer; border-radius:4px;
+    transition:all 0.2s;
+  }
+  .reset-btn:hover { border-color:#ff4444; color:#ff4444; }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family:'DM Mono',monospace;
+    font-size:9px; letter-spacing:3px;
+    color:var(--orange); text-transform:uppercase;
+    margin-bottom:14px; margin-top:30px;
+  }
+
+  /* STAT CARDS */
+  .stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+
+  .stat-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:18px 16px;
+    position:relative; overflow:hidden;
+    animation:fadeUp 0.5s ease both;
+  }
+  .stat-card::before {
+    content:''; position:absolute;
+    top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, var(--orange), transparent);
+  }
+  .stat-card.highlight { border-color:var(--orange); box-shadow:0 0 24px var(--orange-dim); }
+
+  .stat-label { font-family:'DM Mono',monospace; font-size:9px; letter-spacing:2px; color:var(--grey); margin-bottom:8px; }
+  .stat-number { font-family:'Bebas Neue',sans-serif; font-size:44px; line-height:1; letter-spacing:2px; }
+  .stat-number.orange { color:var(--orange); }
+  .stat-sub { font-size:10px; color:var(--grey); margin-top:4px; font-weight:300; }
+  .top-name { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--orange); letter-spacing:1px; line-height:1.2; margin-top:4px; }
+
+  /* CHARTS */
+  .chart-card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:20px 16px 14px;
+    animation:fadeUp 0.6s ease both;
+  }
+  .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .chart-title { font-size:12px; font-weight:600; }
+  .peak-tag { font-family:'DM Mono',monospace; font-size:9px; color:var(--orange); background:var(--orange-dim); padding:4px 10px; border-radius:20px; }
+
+  /* HOUR CHART */
+  #hourChart { display:flex; align-items:flex-end; gap:2px; height:90px; }
+  .hour-bar { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:3px; }
+  .hour-fill { width:100%; background:rgba(255,106,0,0.25); border-radius:2px 2px 0 0; min-height:2px; transition:height 0.7s ease; }
+  .hour-fill.peak { background:var(--orange); box-shadow:0 0 8px var(--orange-glow); }
+  .hour-label { font-family:'DM Mono',monospace; font-size:7px; color:var(--grey); white-space:nowrap; }
+
+  /* DAY CHART */
+  #dayChart { display:flex; align-items:flex-end; gap:3px; height:90px; }
+  .day-bar { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:3px; }
+  .day-fill { width:100%; background:linear-gradient(to top, var(--orange), rgba(255,106,0,0.4)); border-radius:2px 2px 0 0; min-height:2px; transition:height 0.7s ease; }
+  .day-label { font-family:'DM Mono',monospace; font-size:7px; color:var(--grey); white-space:nowrap; }
+
+  /* DISH LIST */
+  .dish-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:20px 16px; animation:fadeUp 0.7s ease both; }
+  .dish-row { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.04); animation:fadeUp 0.4s ease both; }
+  .dish-row:last-child { border-bottom:none; }
+  .dish-name { font-size:12px; font-weight:600; display:block; margin-bottom:3px; }
+  .dish-meta { font-family:'DM Mono',monospace; font-size:9px; color:var(--grey); letter-spacing:1px; }
+  .dish-bar-wrap { width:100px; height:3px; background:rgba(255,255,255,0.06); border-radius:2px; overflow:hidden; }
+  .dish-bar-fill { height:100%; background:linear-gradient(90deg, var(--orange), #ffaa00); border-radius:2px; transition:width 0.9s ease; }
+  .dish-count { font-family:'Bebas Neue',sans-serif; font-size:20px; color:var(--orange); min-width:28px; text-align:right; }
+  .no-data { font-family:'DM Mono',monospace; font-size:11px; color:var(--grey); text-align:center; padding:20px 0; }
+
+  /* RESET MODAL */
+  .modal-overlay {
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,0.85);
+    z-index:200; align-items:center; justify-content:center;
+  }
+  .modal-box {
+    background:#111; border:1px solid rgba(255,60,60,0.4);
+    border-radius:12px; padding:28px 24px;
+    text-align:center; max-width:300px; width:90%;
+  }
+  .modal-title { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:#ff4444; margin-bottom:8px; }
+  .modal-sub { font-size:11px; color:var(--grey); margin-bottom:22px; line-height:1.6; }
+  .modal-btns { display:flex; gap:10px; }
+  .modal-cancel { flex:1; padding:10px; background:transparent; border:1px solid var(--border); color:var(--grey); font-family:'DM Mono',monospace; font-size:10px; cursor:pointer; border-radius:6px; }
+  .modal-confirm { flex:1; padding:10px; background:#ff4444; border:none; color:#fff; font-family:'DM Mono',monospace; font-size:10px; font-weight:700; cursor:pointer; border-radius:6px; letter-spacing:1px; }
+
+  /* FOOTER */
+  footer { text-align:center; padding:28px 16px; font-family:'DM Mono',monospace; font-size:9px; color:rgba(255,255,255,0.12); letter-spacing:2px; position:relative; z-index:1; }
+  footer span { color:var(--orange); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+
+  @media(max-width:480px) {
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+    .stat-number { font-size:36px; }
+    .dish-bar-wrap { width:60px; }
+    .reset-btn { margin-left:0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- RESET CONFIRM MODAL -->
+<div class="modal-overlay" id="resetModal">
+  <div class="modal-box">
+    <div class="modal-title">RESET ALL DATA?</div>
+    <div class="modal-sub">This will permanently delete all scan, view, and AR tap data from Firebase. This cannot be undone.</div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="cancelReset()">CANCEL</button>
+      <button class="modal-confirm" onclick="doReset()">YES, RESET</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">ARFOOD<span>.</span>STUDIO</div>
+  <div class="live-badge"><div class="pulse"></div>LIVE</div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;color:#444;letter-spacing:2px;">OWNER DASHBOARD</div>
+</header>
+
+<main>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <button class="filter-btn" id="filter-1" onclick="setFilter(1)">TODAY</button>
+    <button class="filter-btn" id="filter-7" onclick="setFilter(7)">7 DAYS</button>
+    <button class="filter-btn" id="filter-14" onclick="setFilter(14)">14 DAYS</button>
+    <button class="filter-btn" id="filter-30" onclick="setFilter(30)">30 DAYS</button>
+    <button class="filter-btn" id="filter-custom" onclick="showCustom()">CUSTOM</button>
+    <button class="reset-btn" id="resetBtn" onclick="confirmReset()">RESET ALL DATA</button>
+  </div>
+
+  <!-- CUSTOM DATE RANGE -->
+  <div class="custom-range" id="customRange">
+    <input type="date" id="customFrom">
+    <span style="color:#444;font-size:11px;">to</span>
+    <input type="date" id="customTo">
+    <button class="apply-btn" onclick="applyCustom()">APPLY</button>
+  </div>
+
+  <!-- STATS -->
+  <p class="section-title">Overview</p>
+  <div class="stats-grid">
+    <div class="stat-card highlight" style="animation-delay:0s">
+      <div class="stat-label">QR SCANS</div>
+      <div class="stat-number orange" id="totalScans">0</div>
+      <div class="stat-sub">Selected period</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.08s">
+      <div class="stat-label">TODAY'S SCANS</div>
+      <div class="stat-number" id="todayScans">0</div>
+      <div class="stat-sub">Resets at midnight</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.16s">
+      <div class="stat-label">DISH VIEWS</div>
+      <div class="stat-number" id="totalViews">0</div>
+      <div class="stat-sub">3D model opens</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.24s">
+      <div class="stat-label">AR TAPS</div>
+      <div class="stat-number" id="totalAR">0</div>
+      <div class="stat-sub">View in Space clicks</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.32s">
+      <div class="stat-label">AVG VIEW TIME</div>
+      <div class="stat-number orange" id="avgTime">0s</div>
+      <div class="stat-sub">Per dish session</div>
+    </div>
+    <div class="stat-card" style="animation-delay:0.4s">
+      <div class="stat-label">TOP DISH</div>
+      <div class="top-name" id="topDish">—</div>
+      <div class="stat-sub">Most viewed in AR</div>
+    </div>
+  </div>
+
+  <!-- DAY TREND -->
+  <p class="section-title">Daily Trend</p>
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title">Scans Per Day</div>
+    </div>
+    <div id="dayChart"></div>
+  </div>
+
+  <!-- HOUR CHART -->
+  <p class="section-title">Peak Hours</p>
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="chart-title">Hourly Activity</div>
+      <div class="peak-tag">PEAK: <span id="peakHour">—</span></div>
+    </div>
+    <div id="hourChart"></div>
+  </div>
+
+  <!-- DISH PERFORMANCE -->
+  <p class="section-title">Dish Performance</p>
+  <div class="dish-card">
+    <div id="dishList"><p class="no-data">Loading...</p></div>
+  </div>
+
+</main>
+
+<footer>POWERED BY <span>ARFOOD.STUDIO</span> · THE FUTURE OF DINING</footer>
+
+</body>
+</html>
