@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARFOOD.STUDIO — Contact</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@200;300;400;600;700&family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange: #FF6A00;
+    --orange-dim: rgba(255,106,0,0.12);
+    --orange-glow: rgba(255,106,0,0.3);
+    --black: #000;
+    --dark: #0a0a0a;
+    --border: rgba(255,106,0,0.15);
+    --grey: rgba(255,255,255,0.35);
+    --white: #fff;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Montserrat', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(255,106,0,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,106,0,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events:none; z-index:0;
+  }
+
+  /* Orange glow top */
+  body::after {
+    content:'';
+    position:fixed;
+    top:0; left:50%; transform:translateX(-50%);
+    width:300px; height:200px;
+    background: radial-gradient(ellipse at top, rgba(255,106,0,0.08) 0%, transparent 70%);
+    pointer-events:none; z-index:0;
+  }
+
+  .container {
+    position: relative; z-index:1;
+    width: 100%; max-width: 380px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 28px;
+  }
+
+  /* LOGO */
+  .logo-section { text-align: center; }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 36px; letter-spacing: 5px;
+    color: var(--white);
+    animation: fadeUp 0.5s ease both;
+  }
+  .logo span { color: var(--orange); }
+  .logo-sub {
+    font-size: 8px; letter-spacing: 5px;
+    color: var(--grey); font-weight: 200;
+    margin-top: 4px;
+    animation: fadeUp 0.5s ease 0.1s both;
+  }
+  .logo-tagline {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 14px; font-style: italic;
+    color: var(--orange); margin-top: 8px;
+    animation: fadeUp 0.5s ease 0.2s both;
+  }
+
+  /* DIVIDER */
+  .divider {
+    width: 60px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--orange), transparent);
+    animation: fadeUp 0.5s ease 0.3s both;
+  }
+
+  /* CONTACT CARDS */
+  .cards { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+
+  .card {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--dark);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    text-decoration: none;
+    color: var(--white);
+    transition: all 0.25s ease;
+    position: relative; overflow: hidden;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .card::before {
+    content:'';
+    position:absolute; left:0; top:0; bottom:0; width:2px;
+    background: var(--orange);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.3s ease;
+  }
+
+  .card:active::before,
+  .card:hover::before { transform: scaleY(1); }
+
+  .card:active, .card:hover {
+    border-color: var(--orange);
+    background: #0f0f0f;
+    box-shadow: 0 0 20px var(--orange-dim);
+  }
+
+  .card-icon {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: var(--orange-dim);
+    border: 1px solid rgba(255,106,0,0.2);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 20px;
+  }
+
+  .card-text { flex: 1; }
+  .card-label {
+    font-size: 8px; letter-spacing: 3px;
+    color: var(--grey); font-weight: 300;
+    margin-bottom: 3px; text-transform: uppercase;
+  }
+  .card-value {
+    font-size: 13px; font-weight: 600;
+    color: var(--white); letter-spacing: 0.5px;
+  }
+
+  .card-arrow {
+    font-size: 16px; color: var(--orange);
+    opacity: 0.5;
+  }
+
+  /* DEMO BUTTON */
+  .demo-btn {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 16px;
+    background: var(--orange); color: var(--black);
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px; letter-spacing: 4px; font-weight: 700;
+    text-decoration: none; border-radius: 12px;
+    transition: opacity 0.2s;
+    animation: fadeUp 0.5s ease 0.7s both;
+    box-shadow: 0 0 30px var(--orange-glow);
+  }
+  .demo-btn:active { opacity: 0.85; }
+
+  .demo-dot {
+    width: 6px; height: 6px;
+    background: var(--black); border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  /* FOOTER */
+  .footer-text {
+    font-size: 8px; letter-spacing: 3px;
+    color: rgba(255,255,255,0.1);
+    text-align: center;
+    animation: fadeUp 0.5s ease 0.9s both;
+  }
+  .footer-text span { color: var(--orange); }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(16px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- LOGO -->
+  <div class="logo-section">
+    <div class="logo">ARFOOD<span>.</span>STUDIO</div>
+    <div class="logo-sub">PATIALA · INDIA · EST. 2026</div>
+    <div class="logo-tagline">Scan. Watch. Crave.</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- CONTACT CARDS -->
+  <div class="cards">
+
+    <!-- WhatsApp -->
+    <a class="card" href="https://wa.me/message/YZRMZDSBYEZAF1" style="animation-delay:0.3s">
+      <div class="card-icon">💬</div>
+      <div class="card-text">
+        <div class="card-label">WhatsApp</div>
+        <div class="card-value">Chat With Us</div>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <!-- Instagram -->
+    <a class="card" href="https://www.instagram.com/arfood.studio?igsh=aHB2cDN4cXIzbG91" style="animation-delay:0.4s">
+      <div class="card-icon">📸</div>
+      <div class="card-text">
+        <div class="card-label">Instagram</div>
+        <div class="card-value">@arfood.studio</div>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <!-- Phone -->
+    <a class="card" href="tel:+918968679853" style="animation-delay:0.5s">
+      <div class="card-icon">📞</div>
+      <div class="card-text">
+        <div class="card-label">Call Us</div>
+        <div class="card-value">+91 89686 79853</div>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+    <!-- Email -->
+    <a class="card" href="mailto:himmatpreetsingh130@gmail.com" style="animation-delay:0.6s">
+      <div class="card-icon">✉️</div>
+      <div class="card-text">
+        <div class="card-label">Email</div>
+        <div class="card-value">himmatpreetsingh130</div>
+      </div>
+      <div class="card-arrow">→</div>
+    </a>
+
+  </div>
+
+  <!-- DEMO BUTTON -->
+  <a class="demo-btn" href="https://himmatpreetsingh130-hub.github.io/arfood-burger/menu.html">
+    <div class="demo-dot"></div>
+    VIEW LIVE AR DEMO
+  </a>
+
+  <div class="footer-text">
+    PATIALA'S FIRST <span>AR DINING EXPERIENCE</span>
+  </div>
+
+</div>
+
+</body>
+</html>
