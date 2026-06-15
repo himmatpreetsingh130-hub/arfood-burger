@@ -1,0 +1,17 @@
+{
+  "name": "Land of Grill — AR Experience",
+  "short_name": "Land of Grill",
+  "description": "Experience Your Food Before You Order",
+  "start_url": "/arfood-burger/landofgrill.html",
+  "display": "fullscreen",
+  "background_color": "#000000",
+  "theme_color": "#C9972B",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "grill.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
