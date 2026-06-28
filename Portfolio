@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Asset Studio — Freelance 3D & AR Models</title>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0D0D0D;
+    --surface: #1A1A1A;
+    --surface-2: #141414;
+    --line: rgba(255,255,255,0.08);
+    --line-bright: rgba(255,255,255,0.16);
+    --text: #EDEDED;
+    --muted: #6B6B6B;
+    --muted-2: #8A8A8A;
+    --lime: #C9FF3D;
+    --lime-dim: rgba(201,255,61,0.1);
+    --lime-glow: rgba(201,255,61,0.25);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  html { scroll-behavior:smooth; }
+
+  body {
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  /* ===== background grid ===== */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(201,255,61,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,255,61,0.025) 1px, transparent 1px);
+    background-size: 44px 44px;
+    pointer-events:none; z-index:0;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  /* ===== header ===== */
+  header {
+    position:sticky; top:0; z-index:100;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 24px;
+    background:rgba(13,13,13,0.92);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+
+  .logo {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:16px; letter-spacing:0.5px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .logo-mark {
+    width:9px; height:9px;
+    background:var(--lime);
+    transform:rotate(45deg);
+    flex-shrink:0;
+  }
+
+  .header-meta {
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; color:var(--muted);
+    letter-spacing:1px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .status-dot {
+    width:6px; height:6px; border-radius:50%;
+    background:var(--lime);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  /* ===== hero ===== */
+  .hero {
+    position:relative; z-index:1;
+    padding:72px 24px 56px;
+    max-width:1100px; margin:0 auto;
+  }
+
+  .hero-eyebrow {
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px; color:var(--lime);
+    letter-spacing:2px;
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:24px;
+    opacity:0; animation:fadeUp 0.6s ease 0.1s forwards;
+  }
+  .hero-eyebrow::before {
+    content:'';
+    width:24px; height:1px;
+    background:var(--lime);
+  }
+
+  .hero-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(36px, 7vw, 68px);
+    line-height:1.04;
+    letter-spacing:-0.5px;
+    max-width:780px;
+    opacity:0; animation:fadeUp 0.6s ease 0.2s forwards;
+  }
+  .hero-title .accent { color:var(--lime); }
+
+  .hero-sub {
+    margin-top:22px;
+    font-size:15px; line-height:1.7;
+    color:var(--muted-2);
+    max-width:520px;
+    font-weight:300;
+    opacity:0; animation:fadeUp 0.6s ease 0.32s forwards;
+  }
+
+  .hero-stats {
+    display:flex; gap:32px; flex-wrap:wrap;
+    margin-top:40px;
+    padding-top:24px;
+    border-top:1px solid var(--line);
+    opacity:0; animation:fadeUp 0.6s ease 0.44s forwards;
+  }
+  .hstat-num {
+    font-family:'JetBrains Mono',monospace;
+    font-size:22px; font-weight:600; color:var(--text);
+  }
+  .hstat-label {
+    font-size:10px; letter-spacing:1.5px; color:var(--muted);
+    margin-top:4px; text-transform:uppercase;
+  }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(18px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* ===== section label ===== */
+  .section-head {
+    max-width:1100px; margin:0 auto;
+    padding:0 24px;
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:28px; margin-top:8px;
+  }
+  .section-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:22px;
+  }
+  .section-note {
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; color:var(--muted);
+    letter-spacing:1px;
+  }
+
+  /* ===== gallery ===== */
+  .gallery {
+    position:relative; z-index:1;
+    max-width:1100px; margin:0 auto;
+    padding:0 24px 90px;
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap:16px;
+  }
+
+  .card {
+    position:relative;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:2px;
+    overflow:hidden;
+    cursor:pointer;
+    transition:border-color 0.25s ease, transform 0.25s ease;
+  }
+  .card:hover {
+    border-color:var(--line-bright);
+    transform:translateY(-2px);
+  }
+
+  /* viewport frame corners */
+  .frame-corner {
+    position:absolute;
+    width:14px; height:14px;
+    border-color:var(--lime);
+    opacity:0; transition:opacity 0.25s ease;
+    z-index:3; pointer-events:none;
+  }
+  .card:hover .frame-corner { opacity:0.9; }
+  .fc-tl { top:10px; left:10px; border-top:1.5px solid; border-left:1.5px solid; }
+  .fc-tr { top:10px; right:10px; border-top:1.5px solid; border-right:1.5px solid; }
+  .fc-bl { bottom:10px; left:10px; border-bottom:1.5px solid; border-left:1.5px solid; }
+  .fc-br { bottom:10px; right:10px; border-bottom:1.5px solid; border-right:1.5px solid; }
+
+  .card-viewport {
+    position:relative;
+    width:100%; aspect-ratio:1/1;
+    background:
+      radial-gradient(circle at 50% 30%, rgba(201,255,61,0.06), transparent 60%),
+      #111;
+    overflow:hidden;
+  }
+  .card-viewport img {
+    width:100%; height:100%;
+    object-fit:cover;
+    transition:transform 0.4s ease, opacity 0.4s ease;
+  }
+  .card:hover .card-viewport img { transform:scale(1.04); }
+
+  .card-tag {
+    position:absolute; top:10px; left:10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; letter-spacing:1px; color:var(--lime);
+    background:rgba(13,13,13,0.7);
+    padding:3px 7px;
+    z-index:2;
+  }
+
+  .card-index {
+    position:absolute; bottom:10px; right:10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; color:var(--muted-2);
+    background:rgba(13,13,13,0.7);
+    padding:3px 7px;
+    z-index:2;
+  }
+
+  .card-info {
+    padding:14px 16px 16px;
+    border-top:1px solid var(--line);
+  }
+  .card-name {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:15px;
+  }
+  .card-meta {
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px; color:var(--muted);
+    margin-top:6px;
+    display:flex; gap:10px;
+    letter-spacing:0.3px;
+  }
+
+  /* ===== viewer modal ===== */
+  .modal-overlay {
+    position:fixed; inset:0;
+    background:rgba(8,8,8,0.94);
+    backdrop-filter:blur(6px);
+    z-index:1000;
+    display:none;
+    align-items:center; justify-content:center;
+    padding:16px;
+  }
+  .modal-overlay.active { display:flex; }
+
+  .modal-box {
+    width:100%; max-width:760px;
+    background:var(--surface-2);
+    border:1px solid var(--line-bright);
+    position:relative;
+    max-height:92vh;
+    display:flex; flex-direction:column;
+  }
+
+  .modal-close {
+    position:absolute; top:14px; right:14px;
+    width:34px; height:34px;
+    background:rgba(13,13,13,0.8);
+    border:1px solid var(--line);
+    color:var(--text);
+    font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:10;
+  }
+
+  .modal-viewer-wrap {
+    position:relative;
+    width:100%; aspect-ratio:1/1;
+    background:
+      radial-gradient(circle at 50% 35%, rgba(201,255,61,0.07), transparent 65%),
+      #0a0a0a;
+  }
+
+  model-viewer {
+    width:100%; height:100%;
+    --poster-color: transparent;
+    background:transparent;
+  }
+
+  .modal-frame-corner {
+    position:absolute; width:18px; height:18px;
+    border-color:rgba(201,255,61,0.4);
+    z-index:5; pointer-events:none;
+  }
+
+  .modal-details {
+    padding:20px 22px 22px;
+    border-top:1px solid var(--line);
+    overflow-y:auto;
+  }
+
+  .modal-title-row {
+    display:flex; justify-content:space-between; align-items:flex-start;
+    gap:12px; margin-bottom:14px;
+  }
+  .modal-name {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700; font-size:20px;
+  }
+  .modal-tag {
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; color:var(--lime);
+    letter-spacing:1px;
+    border:1px solid rgba(201,255,61,0.3);
+    padding:4px 8px;
+    white-space:nowrap;
+  }
+
+  .stat-grid {
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:1px;
+    background:var(--line);
+    margin-bottom:16px;
+  }
+  .stat-box {
+    background:var(--surface);
+    padding:10px 12px;
+  }
+  .stat-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:8px; color:var(--muted);
+    letter-spacing:1px; text-transform:uppercase;
+    margin-bottom:5px;
+  }
+  .stat-val {
+    font-family:'JetBrains Mono',monospace;
+    font-size:13px; color:var(--text); font-weight:500;
+  }
+
+  .modal-actions { display:flex; gap:8px; }
+
+  .btn-ar {
+    flex:1;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px;
+    background:var(--lime); color:#0D0D0D;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:12px; letter-spacing:0.3px;
+    border:none; cursor:pointer;
+  }
+  .btn-ar:active { opacity:0.85; }
+
+  .btn-rotate {
+    padding:13px 16px;
+    background:transparent; color:var(--muted-2);
+    border:1px solid var(--line-bright);
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; letter-spacing:1px;
+    cursor:pointer;
+  }
+  .btn-rotate:active { border-color:var(--lime); color:var(--lime); }
+
+  .download-disabled {
+    margin-top:10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; color:var(--muted);
+    letter-spacing:0.5px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .lock-icon { width:9px; height:9px; border:1px solid var(--muted); border-radius:1px; position:relative; }
+  .lock-icon::before { content:''; position:absolute; top:-4px; left:1px; width:5px; height:5px; border:1px solid var(--muted); border-radius:50% 50% 0 0; border-bottom:none; }
+
+  model-viewer::part(default-ar-button) { display:none; }
+
+  /* ===== contact ===== */
+  .contact-section {
+    position:relative; z-index:1;
+    border-top:1px solid var(--line);
+    padding:64px 24px 56px;
+  }
+  .contact-inner {
+    max-width:1100px; margin:0 auto;
+    display:flex; justify-content:space-between; align-items:flex-end;
+    flex-wrap:wrap; gap:32px;
+  }
+
+  .contact-title {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:clamp(26px, 5vw, 38px);
+    line-height:1.1;
+    max-width:420px;
+  }
+  .contact-title .accent { color:var(--lime); }
+
+  .contact-links {
+    display:flex; flex-direction:column; gap:10px;
+    min-width:240px;
+  }
+
+  .contact-link {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:16px;
+    padding:14px 18px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    text-decoration:none; color:var(--text);
+    transition:border-color 0.2s ease, background 0.2s ease;
+  }
+  .contact-link:hover {
+    border-color:var(--lime);
+    background:var(--lime-dim);
+  }
+  .cl-label {
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; color:var(--muted); letter-spacing:1.5px;
+  }
+  .cl-value {
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600; font-size:14px; margin-top:3px;
+  }
+  .cl-arrow { color:var(--lime); font-size:14px; }
+
+  footer {
+    position:relative; z-index:1;
+    border-top:1px solid var(--line);
+    padding:20px 24px;
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:9px; color:var(--muted);
+    letter-spacing:1px;
+    max-width:1100px; margin:0 auto;
+  }
+
+  @media (max-width:640px) {
+    .gallery { grid-template-columns:repeat(2, 1fr); gap:10px; }
+    .hero { padding:48px 18px 40px; }
+    .hero-stats { gap:22px; }
+    .section-head { padding:0 18px; }
+    .stat-grid { grid-template-columns:repeat(2,1fr); }
+    .contact-inner { flex-direction:column; align-items:flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-mark"></div>3D / ASSET STUDIO</div>
+  <div class="header-meta"><div class="status-dot"></div>AVAILABLE FOR WORK</div>
+</header>
+
+<section class="hero">
+  <div class="hero-eyebrow">FREELANCE 3D &amp; AR MODELING</div>
+  <h1 class="hero-title">Real objects,<br>rendered in <span class="accent">three dimensions.</span></h1>
+  <p class="hero-sub">Photoreal 3D models built for AR, e-commerce, and product visualization — optimized, AR-ready, and delivered fast.</p>
+  <div class="hero-stats">
+    <div>
+      <div class="hstat-num">6</div>
+      <div class="hstat-label">Models Shown</div>
+    </div>
+    <div>
+      <div class="hstat-num">GLB</div>
+      <div class="hstat-label">AR Ready Format</div>
+    </div>
+    <div>
+      <div class="hstat-num">24–48h</div>
+      <div class="hstat-label">Turnaround</div>
+    </div>
+  </div>
+</section>
+
+<div class="section-head">
+  <div class="section-title">Selected Work</div>
+  <div class="section-note">TAP A MODEL TO INSPECT</div>
+</div>
+
+<div class="gallery" id="gallery"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-close" id="modalClose">✕</div>
+    <div class="modal-viewer-wrap">
+      <div class="modal-frame-corner" style="top:14px;left:14px;border-top:1.5px solid;border-left:1.5px solid;"></div>
+      <div class="modal-frame-corner" style="top:14px;right:14px;border-top:1.5px solid;border-right:1.5px solid;"></div>
+      <div class="modal-frame-corner" style="bottom:14px;left:14px;border-bottom:1.5px solid;border-left:1.5px solid;"></div>
+      <div class="modal-frame-corner" style="bottom:14px;right:14px;border-bottom:1.5px solid;border-right:1.5px solid;"></div>
+      <model-viewer id="modalModel"
+        camera-controls auto-rotate rotation-per-second="12deg"
+        shadow-intensity="0.4" ar ar-modes="webxr scene-viewer quick-look"
+        exposure="1">
+      </model-viewer>
+    </div>
+    <div class="modal-details">
+      <div class="modal-title-row">
+        <div class="modal-name" id="modalName">—</div>
+        <div class="modal-tag" id="modalTag">AR READY</div>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">Polygons</div>
+          <div class="stat-val" id="statPoly">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Texture Res</div>
+          <div class="stat-val" id="statTex">—</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Format</div>
+          <div class="stat-val">GLB</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-ar" id="btnAR">VIEW IN AR</button>
+        <button class="btn-rotate" id="btnRotate">PAUSE</button>
+      </div>
+      <div class="download-disabled"><div class="lock-icon"></div>DOWNLOAD DISABLED · PREVIEW ONLY</div>
+    </div>
+  </div>
+</div>
+
+<section class="contact-section">
+  <div class="contact-inner">
+    <div class="contact-title">Need a model<br>built for <span class="accent">your product?</span></div>
+    <div class="contact-links">
+      <a class="contact-link" href="https://wa.me/918968679853">
+        <div>
+          <div class="cl-label">WHATSAPP</div>
+          <div class="cl-value">+91 89686 79853</div>
+        </div>
+        <div class="cl-arrow">→</div>
+      </a>
+      <a class="contact-link" href="tel:+918968679863">
+        <div>
+          <div class="cl-label">CALL</div>
+          <div class="cl-value">+91 89686 79863</div>
+        </div>
+        <div class="cl-arrow">→</div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>3D / ASSET STUDIO</div>
+  <div>FREELANCE 3D &amp; AR MODELING</div>
+</footer>
+
+<script>
+  // ===== Model data =====
+  const models = [
+    { id:'burger',     name:'Burger',      img:'burger.png',     glb:'Burger.glb',                          poly:'48,200',  tex:'2048×2048' },
+    { id:'chair',      name:'Orange Chair',img:'chair.png',      glb:'orangearmchair-v1.glb',                poly:'62,500',  tex:'2048×2048' },
+    { id:'ps5',        name:'PS5 Console', img:'ps.png',         glb:'Ps5-v1.glb',                           poly:'71,300',  tex:'4096×4096' },
+    { id:'car',        name:'BMW',         img:'bmw.png',        glb:'Bmw-v1.glb',                           poly:'128,900', tex:'4096×4096' },
+    { id:'pizza',      name:'Pizza',       img:'pizza.png',      glb:'pizza.glb',                            poly:'39,700',  tex:'2048×2048' },
+    { id:'coldcoffee', name:'Cold Coffee', img:'coldcoffee.png', glb:'coffeemodel.glb',                      poly:'27,400',  tex:'2048×2048' },
+  ];
+
+  const gallery = document.getElementById('gallery');
+
+  models.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="frame-corner fc-tl"></div>
+      <div class="frame-corner fc-tr"></div>
+      <div class="frame-corner fc-bl"></div>
+      <div class="frame-corner fc-br"></div>
+      <div class="card-viewport">
+        <span class="card-tag">3D · AR</span>
+        <span class="card-index">${String(i+1).padStart(2,'0')}</span>
+        <img src="${m.img}" alt="${m.name}" loading="lazy" onerror="this.style.opacity='0';this.parentElement.style.background='#161616'">
+      </div>
+      <div class="card-info">
+        <div class="card-name">${m.name}</div>
+        <div class="card-meta"><span>${m.poly} TRIS</span><span>${m.tex}</span></div>
+      </div>
+    `;
+    card.addEventListener('click', () => openModal(m));
+    gallery.appendChild(card);
+  });
+
+  // ===== Modal logic =====
+  const overlay = document.getElementById('modalOverlay');
+  const modalModel = document.getElementById('modalModel');
+  const modalName = document.getElementById('modalName');
+  const statPoly = document.getElementById('statPoly');
+  const statTex = document.getElementById('statTex');
+  const btnAR = document.getElementById('btnAR');
+  const btnRotate = document.getElementById('btnRotate');
+
+  function openModal(m) {
+    modalModel.setAttribute('src', m.glb);
+    modalModel.setAttribute('alt', m.name + ' 3D model');
+    modalModel.setAttribute('auto-rotate', '');
+    modalName.textContent = m.name;
+    statPoly.textContent = m.poly;
+    statTex.textContent = m.tex;
+    btnRotate.textContent = 'PAUSE';
+    overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+    modalModel.removeAttribute('src');
+  }
+
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+  btnAR.addEventListener('click', () => {
+    if (modalModel.activateAR) modalModel.activateAR();
+  });
+
+  btnRotate.addEventListener('click', () => {
+    if (modalModel.hasAttribute('auto-rotate')) {
+      modalModel.removeAttribute('auto-rotate');
+      btnRotate.textContent = 'ROTATE';
+    } else {
+      modalModel.setAttribute('auto-rotate', '');
+      btnRotate.textContent = 'PAUSE';
+    }
+  });
+
+  // disable right-click / drag-save on model viewer images & canvas as basic download deterrent
+  document.addEventListener('contextmenu', (e) => {
+    if (e.target.closest('model-viewer') || e.target.closest('.card-viewport')) e.preventDefault();
+  });
+</script>
+
+</body>
+</html>
