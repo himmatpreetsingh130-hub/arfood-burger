@@ -170,6 +170,33 @@
     opacity:0; pointer-events:none; transition:opacity 0.3s;
   }
   #toast.show{ opacity:1; }
+
+  /* ---- export modal (reliable manual-copy fallback) ---- */
+  #jsonModal{
+    position:fixed; inset:0; z-index:80; background:rgba(8,3,3,0.92);
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  #jsonModal.show{ display:flex; }
+  #jsonBox{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:18px; width:100%; max-width:520px; max-height:80vh; display:flex; flex-direction:column; gap:12px;
+  }
+  #jsonBox h3{
+    margin:0; font-family:'Spectral',serif; font-size:17px; color:var(--bone);
+  }
+  #jsonBox p{ margin:0; font-size:12.5px; color:var(--muted); line-height:1.5; }
+  #jsonTextarea{
+    width:100%; flex:1; min-height:240px; background:var(--bg-2); color:var(--bone);
+    border:1px solid var(--line); border-radius:8px; padding:10px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.5; resize:vertical;
+  }
+  #jsonModalBtns{ display:flex; gap:10px; }
+  #jsonModalBtns button{
+    flex:1; padding:11px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg-2); color:var(--bone); font-family:'IBM Plex Sans',sans-serif;
+    font-size:13px; cursor:pointer;
+  }
+  #jsonModalBtns .primary{ background:var(--gold); color:var(--bg-2); border-color:var(--gold); font-weight:600; }
 </style>
 </head>
 <body>
@@ -227,6 +254,30 @@
 </div>
 
 <div id="toast"></div>
+
+<div id="jsonModal">
+  <div id="jsonBox">
+    <h3>Your labels (copy this)</h3>
+    <p>Tap inside the box below, select all, copy — then paste it back in the chat. This works even if clipboard/download permissions are blocked.</p>
+    <textarea id="jsonTextarea" readonly></textarea>
+    <div id="jsonModalBtns">
+      <button id="jsonSelectBtn" type="button">Select all</button>
+      <button class="primary" id="jsonCloseBtn" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="jsonModal">
+  <div id="jsonBox">
+    <h3>Your labels — copy this</h3>
+    <p>Tap inside the box below, it'll select everything. Then copy (long-press → Copy, or use the Copy button) and paste it back in the chat.</p>
+    <textarea id="jsonTextarea" readonly></textarea>
+    <div id="jsonModalBtns">
+      <button id="jsonCloseBtn" type="button">Close</button>
+      <button id="jsonCopyBtn" class="primary" type="button">Copy</button>
+    </div>
+  </div>
+</div>
 
 <script type="importmap">
 {
@@ -519,19 +570,22 @@ editToggle.addEventListener("click", () => {
   setTimeout(() => { if(!editMode) document.getElementById("hint").style.opacity="0"; }, 2500);
 });
 
-document.getElementById("exportBtn").addEventListener("click", async () => {
+document.getElementById("exportBtn").addEventListener("click", () => {
   const json = JSON.stringify(labels, null, 2);
-  try {
-    await navigator.clipboard.writeText(json);
-    showToast("Copied JSON to clipboard");
-  } catch (e) {
-    const blob = new Blob([json], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = "heart-labels.json";
-    a.click();
-    showToast("Downloaded heart-labels.json");
-  }
+  const ta = document.getElementById("jsonTextarea");
+  ta.value = json;
+  document.getElementById("jsonModal").classList.add("show");
+  ta.focus();
+  ta.select();
+  navigator.clipboard?.writeText(json).then(() => showToast("Also copied to clipboard")).catch(() => {});
+});
+document.getElementById("jsonSelectBtn").addEventListener("click", () => {
+  const ta = document.getElementById("jsonTextarea");
+  ta.focus();
+  ta.select();
+});
+document.getElementById("jsonCloseBtn").addEventListener("click", () => {
+  document.getElementById("jsonModal").classList.remove("show");
 });
 
 document.getElementById("resetBtn").addEventListener("click", () => {
