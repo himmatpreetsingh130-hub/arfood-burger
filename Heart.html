@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>The Human Heart — Interactive Anatomy</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0c0505;
+    --bg-2: #170808;
+    --panel: #1c0b0b;
+    --line: #3a1414;
+    --crimson: #e6394f;
+    --crimson-dim: #8c2230;
+    --bone: #ede3d3;
+    --muted: #a2897a;
+    --gold: #cf9a52;
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ margin:0; padding:0; height:100%; overflow:hidden; background:var(--bg); font-family:'IBM Plex Sans', sans-serif; color:var(--bone); }
+
+  #canvas-wrap{ position:fixed; inset:0; }
+  canvas{ display:block; touch-action:none; }
+
+  /* ---- top bar ---- */
+  #topbar{
+    position:fixed; top:0; left:0; right:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 16px 18px 10px;
+    background:linear-gradient(180deg, rgba(12,5,5,0.9) 0%, rgba(12,5,5,0) 100%);
+    pointer-events:none;
+  }
+  #topbar > *{ pointer-events:auto; }
+  #title{
+    font-family:'Spectral', serif; font-weight:600; font-size:15px; letter-spacing:0.04em;
+    color: var(--bone);
+  }
+  #title .eyebrow{
+    display:block; font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:0.18em;
+    color: var(--crimson); text-transform:uppercase; margin-bottom:3px;
+  }
+  #topbarRight{ display:flex; align-items:center; gap:10px; }
+  #recenterBtn{
+    width:38px; height:38px; border-radius:50%;
+    background: var(--panel); border:1px solid var(--line);
+    color: var(--muted); font-size:17px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  #editToggle{
+    width:38px; height:38px; border-radius:50%;
+    background: var(--panel); border:1px solid var(--line);
+    color: var(--muted); font-size:16px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  #editToggle.active{ background:var(--crimson); color:var(--bg); border-color:var(--crimson); }
+
+  /* ---- ECG pulse line, signature element ---- */
+  #ecg{
+    position:fixed; bottom:0; left:0; right:0; height:34px; z-index:15;
+    pointer-events:none; opacity:0.85;
+  }
+  #ecg svg{ width:200%; height:100%; animation: scroll-ecg 6s linear infinite; }
+  @keyframes scroll-ecg{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+
+  /* ---- hint pill ---- */
+  #hint{
+    position:fixed; top:70px; left:50%; transform:translateX(-50%);
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:0.06em;
+    color: var(--muted); background:rgba(28,11,11,0.7); border:1px solid var(--line);
+    padding:6px 14px; border-radius:20px; z-index:20; white-space:nowrap;
+    transition:opacity 0.4s;
+  }
+
+  /* ---- bottom sheet ---- */
+  #sheet{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background: var(--panel); border-top:1px solid var(--line);
+    border-radius:18px 18px 0 0;
+    padding: 18px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(.2,.8,.2,1);
+    max-height: 46vh; overflow-y:auto;
+  }
+  #sheet.open{ transform: translateY(0); }
+  #sheet .grip{ width:36px; height:4px; background:var(--line); border-radius:2px; margin:0 auto 14px; }
+
+  .part-index{
+    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:0.14em;
+    color: var(--crimson); text-transform:uppercase; margin-bottom:6px;
+  }
+  .part-name{
+    font-family:'Spectral', serif; font-weight:600; font-size:23px; color:var(--bone);
+    margin:0 0 10px;
+  }
+  .part-def{
+    font-size:14.5px; line-height:1.55; color:var(--muted); margin:0;
+  }
+
+  /* ---- edit mode fields ---- */
+  #editFields{ display:none; }
+  #editFields.show{ display:block; }
+  #editFields label{
+    display:block; font-family:'IBM Plex Mono', monospace; font-size:10px;
+    letter-spacing:0.1em; text-transform:uppercase; color:var(--gold); margin:14px 0 6px;
+  }
+  #soloRow{
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    background:var(--bg-2); border:1px solid var(--line); border-radius:8px;
+    padding:10px 12px; margin-top:10px;
+  }
+  .switchLabel{
+    display:flex !important; align-items:center; gap:8px;
+    font-family:'IBM Plex Sans',sans-serif !important; font-size:12.5px !important;
+    text-transform:none !important; letter-spacing:0 !important; color:var(--bone) !important;
+    margin:0 !important;
+  }
+  .switchLabel input{ width:16px; height:16px; accent-color:var(--crimson); }
+  #cycleBtns{ display:flex; align-items:center; gap:8px; }
+  #cycleBtns button{
+    background:var(--panel); border:1px solid var(--line); color:var(--bone);
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 10px;
+    border-radius:6px; cursor:pointer;
+  }
+  #cycleBtns button:active{ background:var(--crimson); color:var(--bg); }
+  #cyclePos{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--muted); min-width:44px; text-align:center; }
+  #editFields input, #editFields textarea{
+    width:100%; background:var(--bg-2); border:1px solid var(--line); border-radius:8px;
+    color:var(--bone); font-family:'IBM Plex Sans', sans-serif; font-size:14px;
+    padding:10px 12px; resize:vertical;
+  }
+  #editFields textarea{ min-height:70px; }
+  #saveRow{ display:flex; gap:10px; margin-top:16px; }
+  #saveBtn{
+    flex:2; padding:12px; border:none; border-radius:8px;
+    background:var(--crimson); color:var(--bg); font-weight:600; font-size:14px;
+    font-family:'IBM Plex Sans',sans-serif; cursor:pointer; margin:0;
+  }
+  #saveBtn:active{ background:var(--crimson-dim); }
+  #skipBtn{
+    flex:1; padding:12px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg-2); color:var(--muted); font-size:12px;
+    font-family:'IBM Plex Sans',sans-serif; cursor:pointer;
+  }
+  #skipBtn:active{ background:var(--line); }
+
+  /* ---- sheet header row with close button ---- */
+  #sheetTopRow{ display:flex; align-items:center; justify-content:space-between; }
+  #closeSheetBtn{
+    width:30px; height:30px; border-radius:50%; background:var(--bg-2); border:1px solid var(--line);
+    color:var(--muted); display:flex; align-items:center; justify-content:center; font-size:13px; cursor:pointer;
+  }
+
+  /* ---- export row (inside edit panel, always reachable) ---- */
+  #exportRow{ display:flex; gap:10px; margin-top:16px; }
+  #exportRow button{
+    flex:1; padding:11px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg-2); color:var(--bone); font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:0.05em; cursor:pointer;
+  }
+  #exportRow button:first-child{ background:var(--gold); color:var(--bg-2); border-color:var(--gold); font-weight:600; }
+  #progress{
+    position:fixed; top:16px; right:64px; z-index:20;
+    font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--muted);
+  }
+
+  #loading{
+    position:fixed; inset:0; z-index:50; background:var(--bg);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; transition:opacity 0.5s;
+  }
+  #loading .pulse{
+    width:14px; height:14px; border-radius:50%; background:var(--crimson);
+    animation: beat 1.1s ease-in-out infinite;
+  }
+  @keyframes beat{ 0%,100%{ transform:scale(1); opacity:0.5; } 25%{ transform:scale(1.6); opacity:1; } 50%{ transform:scale(1); opacity:0.7;} }
+  #loading .label{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.14em; color:var(--muted); text-transform:uppercase; }
+
+  #toast{
+    position:fixed; top:70px; left:50%; transform:translateX(-50%);
+    background:var(--gold); color:var(--bg-2); padding:8px 16px; border-radius:20px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; z-index:60;
+    opacity:0; pointer-events:none; transition:opacity 0.3s;
+  }
+  #toast.show{ opacity:1; }
+
+  /* ---- desktop: floating card instead of full-width bottom sheet ---- */
+  @media (min-width: 900px){
+    #sheet{
+      left: 24px; right: auto; bottom: 44px;
+      width: 380px; max-width: calc(100vw - 48px);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+      border: 1px solid var(--line);
+      max-height: 62vh;
+    }
+    #sheet .grip{ display:none; }
+    #hint{ top:76px; }
+    #jsonBox{ max-width: 560px; }
+  }
+
+  /* ---- export modal (reliable manual-copy fallback) ---- */
+  #jsonModal{
+    position:fixed; inset:0; z-index:80; background:rgba(8,3,3,0.92);
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  #jsonModal.show{ display:flex; }
+  #jsonBox{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:18px; width:100%; max-width:520px; max-height:80vh; display:flex; flex-direction:column; gap:12px;
+  }
+  #jsonBox h3{
+    margin:0; font-family:'Spectral',serif; font-size:17px; color:var(--bone);
+  }
+  #jsonBox p{ margin:0; font-size:12.5px; color:var(--muted); line-height:1.5; }
+  #jsonTextarea{
+    width:100%; flex:1; min-height:240px; background:var(--bg-2); color:var(--bone);
+    border:1px solid var(--line); border-radius:8px; padding:10px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; line-height:1.5; resize:vertical;
+  }
+  #jsonModalBtns{ display:flex; gap:10px; }
+  #jsonModalBtns button{
+    flex:1; padding:11px; border-radius:8px; border:1px solid var(--line);
+    background:var(--bg-2); color:var(--bone); font-family:'IBM Plex Sans',sans-serif;
+    font-size:13px; cursor:pointer;
+  }
+  #jsonModalBtns .primary{ background:var(--gold); color:var(--bg-2); border-color:var(--gold); font-weight:600; }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="pulse"></div>
+  <div class="label">Loading specimen…</div>
+</div>
+
+<div id="canvas-wrap"></div>
+
+<div id="topbar">
+  <div id="title"><span class="eyebrow">Anatomy · Interactive Model</span>The Human Heart</div>
+  <div id="topbarRight">
+    <div id="recenterBtn" title="Recenter view">⟳</div>
+    <div id="editToggle" title="Toggle label editing">✎</div>
+  </div>
+</div>
+
+<div id="progress"></div>
+<div id="hint">Tap a region to explore</div>
+
+<div id="ecg">
+  <svg viewBox="0 0 800 40" preserveAspectRatio="none">
+    <polyline points="0,20 60,20 80,20 90,5 100,35 110,20 160,20 220,20 240,20 250,8 260,32 270,20 320,20 400,20 460,20 480,20 490,5 500,35 510,20 560,20 620,20 640,20 650,8 660,32 670,20 720,20 800,20"
+      fill="none" stroke="#e6394f" stroke-width="1.5" opacity="0.6"/>
+  </svg>
+</div>
+
+<div id="sheet">
+  <div class="grip"></div>
+  <div id="sheetTopRow">
+    <div class="part-index" id="partIndex">PART 00 / 21</div>
+    <div id="closeSheetBtn" title="Close">✕</div>
+  </div>
+  <h2 class="part-name" id="partName">—</h2>
+  <p class="part-def" id="partDef">—</p>
+
+  <div id="editFields">
+    <div id="soloRow">
+      <label class="switchLabel">
+        <input type="checkbox" id="soloToggle" checked/> Solo view (hide other parts)
+      </label>
+      <div id="cycleBtns">
+        <button id="prevBtn" type="button">‹ Prev</button>
+        <span id="cyclePos">1 / 21</span>
+        <button id="nextBtn" type="button">Next ›</button>
+      </div>
+    </div>
+    <label for="inName">Part name</label>
+    <input id="inName" type="text" placeholder="e.g. Left Ventricle" />
+    <label for="inDef">Definition</label>
+    <textarea id="inDef" placeholder="What this part is and what it does…"></textarea>
+    <div id="saveRow">
+      <button id="saveBtn">Save & next ›</button>
+      <button id="skipBtn" type="button">Skip this part ›</button>
+    </div>
+
+    <div id="exportRow">
+      <button id="exportBtn" type="button">Export labels JSON</button>
+      <button id="resetBtn" type="button">Reset all</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="jsonModal">
+  <div id="jsonBox">
+    <h3>Your labels (copy this)</h3>
+    <p>Tap inside the box below, select all, copy — then paste it back in the chat. This works even if clipboard/download permissions are blocked.</p>
+    <textarea id="jsonTextarea" readonly></textarea>
+    <div id="jsonModalBtns">
+      <button id="jsonSelectBtn" type="button">Select all</button>
+      <button class="primary" id="jsonCloseBtn" type="button">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="jsonModal">
+  <div id="jsonBox">
+    <h3>Your labels — copy this</h3>
+    <p>Tap inside the box below, it'll select everything. Then copy (long-press → Copy, or use the Copy button) and paste it back in the chat.</p>
+    <textarea id="jsonTextarea" readonly></textarea>
+    <div id="jsonModalBtns">
+      <button id="jsonCloseBtn" type="button">Close</button>
+      <button id="jsonCopyBtn" class="primary" type="button">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.150.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.150.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const STORAGE_KEY = "heartLabels_v1";
+
+// Default / fallback labels. Replace this object with your exported JSON
+// once labeling is complete, so the final page works without localStorage.
+const DEFAULT_LABELS = {
+  "tripo_part_0": { "name": "Right Ventricle", "def": "The right ventricle is one of the heart's four main chambers, located in the lower right portion of the heart (on the left side from an observer's perspective). It receives low-oxygen blood from the right atrium and pumps it under low pressure through the pulmonary valve into the pulmonary trunk, sending it to the lungs to pick up fresh oxygen." },
+  "tripo_part_1": { "name": "Aorta", "def": "The aorta is the main and largest artery in the human body. It originates directly from the left ventricle of the heart and distributes freshly oxygen-rich blood to all parts of the body through systemic circulation." },
+  "tripo_part_2": { "name": "Left Atrium", "def": "The left atrium is one of the four chambers of the heart, located in the upper left portion. It receives oxygen-rich blood returning from the lungs through the pulmonary veins and pumps it down into the left ventricle. The visible ear-like flap on its exterior is the left auricle, which acts as a small pouch to increase the chamber's capacity." },
+  "tripo_part_3": { "name": "Left Ventricle", "def": "The left ventricle is the thickest and most muscular chamber of the heart, located in the lower left portion (on the right side from an observer's perspective). It receives oxygen-rich blood from the left atrium and pumps it under high pressure out through the aortic valve into the aorta, distributing oxygenated blood to the entire body." },
+  "tripo_part_4": { "skip": true },
+  "tripo_part_5": { "name": "Superior Vena Cava", "def": "The superior vena cava is a large, prominent vein that carries deoxygenated blood from the upper half of the body back to the heart." },
+  "tripo_part_6": { "skip": true },
+  "tripo_part_7": { "name": "Right Auricle", "def": "The right auricle is a small, wrinkled, conical pouch projecting from the upper portion of the right atrium. It acts like an overflow pocket, expanding to increase the volume capacity of the right atrium as it receives deoxygenated blood returning from the body tissues." },
+  "tripo_part_8": { "name": "Superior Vena Cava", "def": "The superior vena cava is a large, prominent vein that carries deoxygenated blood from the upper half of the body back to the heart." },
+  "tripo_part_9": { "name": "Pulmonary Arteries", "def": "The pulmonary trunk is a major vessel that originates from the right ventricle of the heart. It carries low-oxygen, deoxygenated blood away from the heart and splits into the left and right pulmonary arteries to deliver that blood to the lungs for oxygenation." },
+  "tripo_part_10": { "skip": true },
+  "tripo_part_11": { "name": "The Pulmonary Veins", "def": "The left pulmonary veins are blood vessels that carry freshly oxygenated blood from the left lung back to the heart. Unlike most other veins in the body which carry deoxygenated blood, these veins carry oxygen-rich blood and empty it directly into the left atrium so it can be pumped out to the rest of the body." },
+  "tripo_part_12": { "name": "Pulmonary Veins", "def": "The left pulmonary veins are blood vessels that carry freshly oxygenated blood from the left lung back to the heart. Unlike most other veins in the body which carry deoxygenated blood, these veins carry oxygen-rich blood and empty it directly into the left atrium so it can be pumped out to the rest of the body." },
+  "tripo_part_13": { "skip": true },
+  "tripo_part_14": { "skip": true },
+  "tripo_part_15": { "skip": true },
+  "tripo_part_16": { "skip": true },
+  "tripo_part_17": { "skip": true },
+  "tripo_part_18": { "skip": true },
+  "tripo_part_19": { "skip": true },
+  "tripo_part_20": { "skip": true }
+};
+
+let labels = {};
+try {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  labels = saved ? JSON.parse(saved) : { ...DEFAULT_LABELS };
+} catch (e) { labels = { ...DEFAULT_LABELS }; }
+
+function persist(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(labels)); } catch(e){}
+}
+
+// ---------- three.js setup ----------
+const wrap = document.getElementById("canvas-wrap");
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0c0505);
+scene.fog = new THREE.Fog(0x0c0505, 8, 20);
+
+const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+const camera = new THREE.PerspectiveCamera(40, vw/vh, 0.1, 100);
+camera.position.set(0, 0.3, 4.2);
+const defaultCamPos = new THREE.Vector3(0, 0.3, 4.2);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(vw, vh);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+wrap.appendChild(renderer.domElement);
+
+// lighting — clinical key light + warm rim
+const key = new THREE.DirectionalLight(0xfff2e6, 2.2);
+key.position.set(3, 4, 5);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xe6394f, 1.1);
+rim.position.set(-4, -2, -3);
+scene.add(rim);
+const ambient = new THREE.AmbientLight(0x4a2020, 1.1);
+scene.add(ambient);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 1.5;
+controls.maxDistance = 8;
+controls.target.set(0,0,0);
+
+// group of clickable parts
+const partMeshes = []; // {mesh, name, baseEmissive}
+let heartRoot = null;
+
+const loader = new GLTFLoader();
+loader.load("./heart.glb", (gltf) => {
+  heartRoot = gltf.scene;
+
+  // center + scale to fit
+  const box = new THREE.Box3().setFromObject(heartRoot);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  heartRoot.position.sub(center);
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const scale = 2.4 / maxDim;
+  heartRoot.scale.setScalar(scale);
+
+  // frame the camera so the whole (now-scaled) model fits the view,
+  // regardless of its natural proportions
+  const fitRadius = (size.length() * 0.5) * scale;
+  const fitDist = (fitRadius / Math.sin((camera.fov * Math.PI / 180) / 2)) * 1.35;
+  defaultCamPos.set(0, fitRadius * 0.12, fitDist);
+  camera.position.copy(defaultCamPos);
+  controls.target.set(0, 0, 0);
+  controls.update();
+
+  heartRoot.traverse((child) => {
+    if (child.isMesh) {
+      child.material = child.material.clone();
+      child.material.metalness = 0.15;
+      child.material.roughness = 0.55;
+      child.userData.baseEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0,0,0);
+      child.userData.baseEmissiveIntensity = child.material.emissiveIntensity ?? 1;
+      partMeshes.push(child);
+    }
+  });
+
+  scene.add(heartRoot);
+  partMeshes.sort((a,b) => partOrderIndex(a.name) - partOrderIndex(b.name));
+  updateProgress();
+  document.getElementById("loading").style.opacity = "0";
+  setTimeout(() => document.getElementById("loading").style.display = "none", 500);
+  setTimeout(() => document.getElementById("hint").style.opacity = "0", 3200);
+}, undefined, (err) => {
+  document.getElementById("loading").querySelector(".label").textContent = "Failed to load model";
+  console.error(err);
+});
+
+function resize(){
+  const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener("resize", resize);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", resize);
+}
+// Mobile browsers often report a taller/incorrect viewport for a moment
+// while the address bar is still settling right after load — re-measure
+// a few times shortly after to keep the model centered.
+[100, 400, 900].forEach(delay => setTimeout(resize, delay));
+
+// ---------- selection / highlight ----------
+let selected = null;
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const HILITE = new THREE.Color(0xe6394f);
+
+function clearHighlight(mesh){
+  if (!mesh) return;
+  mesh.material.emissive = mesh.userData.baseEmissive.clone();
+  mesh.material.emissiveIntensity = mesh.userData.baseEmissiveIntensity;
+}
+function applyHighlight(mesh){
+  mesh.material.emissive = HILITE.clone();
+  mesh.material.emissiveIntensity = 0.55;
+}
+
+function applySoloVisibility(mesh){
+  const solo = document.getElementById("soloToggle").checked && editMode;
+  partMeshes.forEach(m => { m.visible = solo ? (m === mesh) : true; });
+}
+
+let frameAnim = null;
+function frameCameraOn(mesh, fit){
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  const radius = Math.max(size.length() * 0.5, 0.05);
+  const dist = fit ? radius / Math.sin((camera.fov * Math.PI/180)/2) * 1.6 : camera.position.distanceTo(controls.target);
+
+  const dir = new THREE.Vector3().subVectors(camera.position, controls.target).normalize();
+  const targetCamPos = new THREE.Vector3().copy(center).add(dir.multiplyScalar(dist));
+  const startTarget = controls.target.clone();
+  const startPos = camera.position.clone();
+  const t0 = performance.now();
+  if (frameAnim) cancelAnimationFrame(frameAnim);
+  function step(now){
+    const p = Math.min((now - t0) / 450, 1);
+    const ease = 1 - Math.pow(1-p, 3);
+    controls.target.lerpVectors(startTarget, center, ease);
+    camera.position.lerpVectors(startPos, targetCamPos, ease);
+    if (p < 1) frameAnim = requestAnimationFrame(step);
+  }
+  frameAnim = requestAnimationFrame(step);
+}
+
+let pulseStart = 0;
+function animatePulse(mesh){
+  pulseStart = performance.now();
+  const dur = 500;
+  function step(t){
+    const p = Math.min((t - pulseStart)/dur, 1);
+    const s = 1 + 0.06 * Math.sin(p * Math.PI);
+    mesh.scale.copy(mesh.userData.baseScale).multiplyScalar(s);
+    if (p < 1) requestAnimationFrame(step);
+    else mesh.scale.copy(mesh.userData.baseScale);
+  }
+  if (!mesh.userData.baseScale) mesh.userData.baseScale = mesh.scale.clone();
+  requestAnimationFrame(step);
+}
+
+function onPointerDown(e){
+  const rect = renderer.domElement.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX);
+  const y = (e.touches ? e.touches[0].clientY : e.clientY);
+  pointer.x = ((x - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((y - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(pointer, camera);
+  const intersects = raycaster.intersectObjects(partMeshes, false);
+  if (intersects.length === 0) return;
+
+  const mesh = intersects[0].object;
+  if (!editMode) {
+    const data = labels[mesh.name];
+    if (!data || data.skip || !data.name) return; // tiny/unlabeled parts: tap does nothing
+  }
+  selectPart(mesh);
+}
+renderer.domElement.addEventListener("pointerdown", onPointerDown);
+
+function selectPart(mesh, fitCamera){
+  if (selected && selected !== mesh) clearHighlight(selected);
+  selected = mesh;
+  applyHighlight(mesh);
+  animatePulse(mesh);
+  applySoloVisibility(mesh);
+  if (editMode) frameCameraOn(mesh, fitCamera !== false);
+  openSheet(mesh);
+  updateCyclePos();
+}
+
+// ---------- UI: sheet, edit mode ----------
+const sheet = document.getElementById("sheet");
+const partIndexEl = document.getElementById("partIndex");
+const partNameEl = document.getElementById("partName");
+const partDefEl = document.getElementById("partDef");
+const editFields = document.getElementById("editFields");
+const inName = document.getElementById("inName");
+const inDef = document.getElementById("inDef");
+const editToggle = document.getElementById("editToggle");
+const progressEl = document.getElementById("progress");
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get("edit") !== "1") {
+  editToggle.style.display = "none";
+}
+
+let editMode = false;
+
+function partOrderIndex(name){
+  const m = name.match(/(\d+)$/);
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+function updateProgress(){
+  const total = partMeshes.length;
+  const done = Object.keys(labels).filter(k => labels[k] && (labels[k].name || labels[k].skip)).length;
+  progressEl.textContent = editMode ? `${done}/${total} LABELED` : "";
+}
+
+function openSheet(mesh){
+  const key = mesh.name;
+  const idx = partOrderIndex(key);
+  const data = labels[key];
+
+  partIndexEl.textContent = `PART ${String(idx).padStart(2,"0")} / ${partMeshes.length}`;
+  if (data && data.skip) {
+    partNameEl.textContent = "Skipped";
+    partDefEl.textContent = "This part is marked as not needed for the project.";
+  } else {
+    partNameEl.textContent = data && data.name ? data.name : `Unlabeled segment (${key})`;
+    partDefEl.textContent = data && data.def ? data.def : (editMode ? "Not labeled yet — enter details below." : "This region hasn't been labeled yet.");
+  }
+
+  if (editMode) {
+    inName.value = data && data.name ? data.name : "";
+    inDef.value = data && data.def ? data.def : "";
+    editFields.classList.add("show");
+    editFields.dataset.currentKey = key;
+  } else {
+    editFields.classList.remove("show");
+  }
+
+  sheet.classList.add("open");
+  document.getElementById("hint").style.opacity = "0";
+}
+
+function updateCyclePos(){
+  if (!selected) return;
+  const idx = partMeshes.indexOf(selected);
+  document.getElementById("cyclePos").textContent = `${idx+1} / ${partMeshes.length}`;
+}
+
+document.getElementById("recenterBtn").addEventListener("click", () => {
+  if (selected) { clearHighlight(selected); selected = null; }
+  partMeshes.forEach(m => { m.visible = true; });
+  sheet.classList.remove("open");
+  const startTarget = controls.target.clone();
+  const startPos = camera.position.clone();
+  const t0 = performance.now();
+  function step(now){
+    const p = Math.min((now - t0) / 500, 1);
+    const ease = 1 - Math.pow(1-p, 3);
+    controls.target.lerpVectors(startTarget, new THREE.Vector3(0,0,0), ease);
+    camera.position.lerpVectors(startPos, defaultCamPos, ease);
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+});
+
+document.getElementById("closeSheetBtn").addEventListener("click", () => {
+  if (selected) {
+    clearHighlight(selected);
+    selected = null;
+  }
+  partMeshes.forEach(m => { m.visible = true; });
+  sheet.classList.remove("open");
+});
+
+document.getElementById("prevBtn").addEventListener("click", () => {
+  if (!partMeshes.length) return;
+  const idx = selected ? partMeshes.indexOf(selected) : 0;
+  const next = (idx - 1 + partMeshes.length) % partMeshes.length;
+  selectPart(partMeshes[next]);
+});
+document.getElementById("nextBtn").addEventListener("click", () => {
+  if (!partMeshes.length) return;
+  const idx = selected ? partMeshes.indexOf(selected) : -1;
+  const next = (idx + 1) % partMeshes.length;
+  selectPart(partMeshes[next]);
+});
+document.getElementById("soloToggle").addEventListener("change", () => {
+  if (selected) applySoloVisibility(selected);
+});
+
+document.getElementById("skipBtn").addEventListener("click", () => {
+  const key = editFields.dataset.currentKey;
+  if (!key) return;
+  labels[key] = { skip: true };
+  persist();
+  updateProgress();
+  showToast("Skipped");
+  document.getElementById("nextBtn").click();
+});
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+  const key = editFields.dataset.currentKey;
+  if (!key) return;
+  labels[key] = { name: inName.value.trim(), def: inDef.value.trim() };
+  persist();
+  updateProgress();
+  showToast("Saved");
+  document.getElementById("nextBtn").click();
+});
+
+editToggle.addEventListener("click", () => {
+  editMode = !editMode;
+  editToggle.classList.toggle("active", editMode);
+  updateProgress();
+  if (editMode) {
+    const start = selected || partMeshes[0];
+    if (start) selectPart(start, true);
+  } else {
+    partMeshes.forEach(m => { m.visible = true; });
+    if (selected) openSheet(selected);
+  }
+  document.getElementById("hint").textContent = editMode ? "Solo view — compare shape, then label it" : "Tap a region to explore";
+  document.getElementById("hint").style.opacity = "1";
+  setTimeout(() => { if(!editMode) document.getElementById("hint").style.opacity="0"; }, 2500);
+});
+
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const json = JSON.stringify(labels, null, 2);
+  const ta = document.getElementById("jsonTextarea");
+  ta.value = json;
+  document.getElementById("jsonModal").classList.add("show");
+  ta.focus();
+  ta.select();
+  navigator.clipboard?.writeText(json).then(() => showToast("Also copied to clipboard")).catch(() => {});
+});
+document.getElementById("jsonSelectBtn").addEventListener("click", () => {
+  const ta = document.getElementById("jsonTextarea");
+  ta.focus();
+  ta.select();
+});
+document.getElementById("jsonCloseBtn").addEventListener("click", () => {
+  document.getElementById("jsonModal").classList.remove("show");
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (!confirm("Clear all saved labels on this device?")) return;
+  labels = {};
+  persist();
+  updateProgress();
+  if (selected) openSheet(selected);
+  showToast("All labels cleared");
+});
+
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+// tap outside model to dismiss sheet (only when not editing)
+renderer.domElement.addEventListener("pointerdown", (e) => {
+  // handled above; sheet stays open once a part is picked
+}, { passive: true });
+
+// ---------- render loop ----------
+function animate(){
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
