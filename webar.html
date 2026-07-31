@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARFOOD.STUDIO — WebAR 3D Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #f8f9fa;
+            color: #1a1a2e;
+            overflow-x: hidden;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .logo {
+            font-weight: 800;
+            font-size: 1.2rem;
+            letter-spacing: -0.5px;
+        }
+        .logo span { color: #6c63ff; }
+        .nav-links { display: flex; gap: 30px; }
+        .nav-links a {
+            font-size: 0.85rem;
+            color: #666;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .nav-links a:hover { color: #6c63ff; }
+
+        /* ===== HERO ===== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 100px 40px 60px;
+            position: relative;
+        }
+        .hero-content {
+            text-align: center;
+            max-width: 700px;
+        }
+        .hero-tag {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6c63ff;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+        .hero-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 20px;
+        }
+        .hero-title span {
+            background: linear-gradient(135deg, #6c63ff, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-sub {
+            font-size: 1.1rem;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+        .hero-btn {
+            display: inline-block;
+            padding: 16px 40px;
+            background: linear-gradient(135deg, #6c63ff, #3b82f6);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            box-shadow: 0 10px 40px rgba(108,99,255,0.3);
+        }
+        .hero-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 50px rgba(108,99,255,0.4);
+        }
+
+        /* ===== 3D VIEWER SECTION ===== */
+        .viewer-section {
+            padding: 60px 40px;
+            background: #fff;
+        }
+        .viewer-section .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+        .viewer-section .section-sub {
+            text-align: center;
+            color: #888;
+            font-size: 0.95rem;
+            margin-bottom: 50px;
+        }
+
+        /* ===== MODEL GRID ===== */
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .model-card {
+            background: #fff;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid #eee;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+        .model-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 60px rgba(108,99,255,0.15);
+            border-color: #6c63ff;
+        }
+        .model-preview {
+            width: 100%;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #f0f0ff, #e8f4f8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .model-preview img {
+            width: 80%;
+            height: 80%;
+            object-fit: contain;
+            transition: transform 0.5s;
+        }
+        .model-card:hover .model-preview img {
+            transform: scale(1.1) rotate(5deg);
+        }
+        .model-badge {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            font-size: 0.6rem;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+        }
+        .badge-ar { background: #e0f7e9; color: #00c853; }
+        .badge-game { background: #e8e0ff; color: #6c63ff; }
+        .badge-new { background: #fff3e0; color: #ff9800; }
+        .model-info {
+            padding: 18px 20px;
+        }
+        .model-name {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .model-meta {
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 12px;
+        }
+        .view-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #6c63ff, #3b82f6);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+        .view-btn:hover {
+            box-shadow: 0 5px 20px rgba(108,99,255,0.3);
+        }
+
+        /* ===== FULL SCREEN 3D VIEWER ===== */
+        .viewer-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            background: rgba(0,0,0,0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s;
+        }
+        .viewer-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .viewer-container {
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            background: #fff;
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+            transform: scale(0.9);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .viewer-overlay.active .viewer-container {
+            transform: scale(1);
+        }
+        #modelViewer {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #f5f7fa 0%, #e4e8ec 100%);
+        }
+        .viewer-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px; height: 40px;
+            background: rgba(255,255,255,0.9);
+            border: none;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .viewer-close:hover {
+            background: #ff4757;
+            color: #fff;
+        }
+        .viewer-toolbar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        .toolbar-btn {
+            padding: 10px 18px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            border-radius: 25px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .toolbar-btn:hover {
+            background: #6c63ff;
+            color: #fff;
+        }
+        .viewer-info {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 10;
+            background: rgba(255,255,255,0.95);
+            padding: 12px 18px;
+            border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .viewer-info-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+        .viewer-info-meta {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 3px;
+        }
+
+        /* ===== LOADING ===== */
+        .loading-spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 5;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 3px solid #eee;
+            border-top: 3px solid #6c63ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        /* ===== ABOUT SECTION ===== */
+        .about-section {
+            padding: 100px 40px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+        }
+        .about-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+        .about-visual {
+            aspect-ratio: 1;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #6c63ff22, #3b82f622);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .about-visual::before {
+            content: '';
+            position: absolute;
+            inset: -50%;
+            background: conic-gradient(from 0deg, transparent, #6c63ff22, transparent);
+            animation: rotateGrad 8s linear infinite;
+        }
+        @keyframes rotateGrad { to { transform: rotate(360deg); } }
+        .about-content h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+        .about-content h2 span { color: #6c63ff; }
+        .about-content p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+        .about-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+        .about-stat {
+            background: #fff;
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        }
+        .about-stat-num {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #6c63ff;
+        }
+        .about-stat-label {
+            font-size: 0.7rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+
+        /* ===== SERVICES ===== */
+        .services-section {
+            padding: 100px 40px;
+            background: #fff;
+        }
+        .services-section .section-title {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 50px;
+        }
+        .services-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+        }
+        .service-card {
+            padding: 35px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+        }
+        .service-card:hover {
+            background: #fff;
+            border-color: #6c63ff;
+            box-shadow: 0 15px 50px rgba(108,99,255,0.1);
+            transform: translateY(-5px);
+        }
+        .service-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+        .service-card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .service-card p {
+            font-size: 0.85rem;
+            color: #888;
+            line-height: 1.6;
+        }
+
+        /* ===== CONTACT ===== */
+        .contact-section {
+            padding: 100px 40px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+        }
+        .contact-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+        .contact-text h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+        .contact-text h2 span { color: #6c63ff; }
+        .contact-text p {
+            color: #aaa;
+            line-height: 1.8;
+            margin-bottom: 30px;
+        }
+        .contact-links {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 16px 22px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px;
+            color: #fff;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .contact-link:hover {
+            background: rgba(108,99,255,0.1);
+            border-color: #6c63ff;
+            transform: translateX(5px);
+        }
+        .contact-link-icon { font-size: 1.3rem; }
+        .contact-link-text { font-size: 0.85rem; font-weight: 500; }
+        .contact-link-arrow { margin-left: auto; }
+
+        /* ===== FOOTER ===== */
+        footer {
+            padding: 30px 40px;
+            background: #0f0f1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        footer .logo { font-size: 0.9rem; color: #555; }
+        footer .copyright { font-size: 0.75rem; color: #444; }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .header { padding: 12px 20px; }
+            .nav-links { display: none; }
+            .hero { padding: 80px 20px 40px; }
+            section { padding: 60px 20px; }
+            .about-grid, .contact-grid { grid-template-columns: 1fr; gap: 30px; }
+            .model-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .about-stats { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+            .viewer-container { width: 95%; height: 70vh; }
+            footer { flex-direction: column; gap: 10px; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="logo"><span>ARFOOD</span>.STUDIO</div>
+        <nav class="nav-links">
+            <a href="#models">Models</a>
+            <a href="#about">About</a>
+            <a href="#services">Services</a>
+            <a href="#contact">Contact</a>
+        </nav>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-tag">✦ WebAR 3D Portfolio</div>
+            <h1 class="hero-title">View 3D Models<br><span>Directly in Browser</span></h1>
+            <p class="hero-sub">Game-ready, AR-ready, and optimized 3D models. Tap to view any model in interactive 3D — no downloads, no external apps.</p>
+            <a href="#models" class="hero-btn">Explore Models ↓</a>
+        </div>
+    </section>
+
+    <!-- 3D VIEWER SECTION -->
+    <section class="viewer-section" id="models">
+        <h2 class="section-title">3D Model Collection</h2>
+        <p class="section-sub">Tap "View in 3D" to inspect any model interactively</p>
+        <div class="model-grid" id="modelGrid"></div>
+    </section>
+
+    <!-- FULL SCREEN VIEWER -->
+    <div class="viewer-overlay" id="viewerOverlay">
+        <div class="viewer-container">
+            <button class="viewer-close" id="viewerClose">✕</button>
+            <div class="viewer-info">
+                <div class="viewer-info-title" id="viewerTitle">Model Name</div>
+                <div class="viewer-info-meta" id="viewerMeta">GLB · 3D View</div>
+            </div>
+            <div class="loading-spinner" id="loadingSpinner">
+                <div class="spinner"></div>
+                <div class="loading-text">Loading 3D Model...</div>
+            </div>
+            <canvas id="modelViewer"></canvas>
+            <div class="viewer-toolbar">
+                <button class="toolbar-btn" id="btnReset">⟳ Reset View</button>
+                <button class="toolbar-btn" id="btnAutoRotate">↻ Auto Rotate</button>
+                <button class="toolbar-btn" id="btnFullscreen">⛶ Fullscreen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABOUT -->
+    <section class="about-section" id="about">
+        <div class="about-grid">
+            <div class="about-visual">🎨</div>
+            <div class="about-content">
+                <h2>Hi, I'm <span>Himmatpreet Singh</span></h2>
+                <p>A 16-year-old professional AI-powered 3D artist. I specialize in creating low-poly, game-ready, and AR/VR-ready 3D models optimized for real-time performance.</p>
+                <p>Every model is crafted with precision — clean topology, Draco compression, and tested in AR before delivery. Fast turnaround, premium quality.</p>
+                <div class="about-stats">
+                    <div class="about-stat">
+                        <div class="about-stat-num">15+</div>
+                        <div class="about-stat-label">Models</div>
+                    </div>
+                    <div class="about-stat">
+                        <div class="about-stat-num">16</div>
+                        <div class="about-stat-label">Age</div>
+                    </div>
+                    <div class="about-stat">
+                        <div class="about-stat-num">24h</div>
+                        <div class="about-stat-label">Delivery</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SERVICES -->
+    <section class="services-section" id="services">
+        <h2 class="section-title">What I Offer</h2>
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-icon">🎮</div>
+                <h3>Game-Ready Models</h3>
+                <p>Clean topology, optimized for Unity & Unreal. Low draw calls, minimal file size.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">📱</div>
+                <h3>AR-Ready Assets</h3>
+                <p>Every GLB tested live in AR. Guaranteed to render on ARKit, ARCore & WebAR.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">⚡</div>
+                <h3>Fast Delivery</h3>
+                <p>Most assets delivered within 24–48 hours. Rush orders available.</p>
+            </div>
+            <div class="service-card">
+                <div class="service-icon">🎯</div>
+                <h3>Custom Orders</h3>
+                <p>Describe your vision — characters, props, environments. Anything goes.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="contact-section" id="contact">
+        <div class="contact-grid">
+            <div class="contact-text">
+                <h2>Let's Work<br><span>Together</span></h2>
+                <p>Need a custom 3D model for your project? Send me your requirements and I'll bring it to life.</p>
+            </div>
+            <div class="contact-links">
+                <a href="https://wa.me/918968679853" target="_blank" class="contact-link">
+                    <span class="contact-link-icon">💬</span>
+                    <span class="contact-link-text">WhatsApp · +91 89686 79853</span>
+                    <span class="contact-link-arrow">→</span>
+                </a>
+                <a href="tel:+918968679863" class="contact-link">
+                    <span class="contact-link-icon">📞</span>
+                    <span class="contact-link-text">Call · +91 89686 79863</span>
+                    <span class="contact-link-arrow">→</span>
+                </a>
+                <a href="https://www.freelancer.com/u/ARFoodStudio?sb=t" target="_blank" class="contact-link">
+                    <span class="contact-link-icon">💼</span>
+                    <span class="contact-link-text">Freelancer · View Profile</span>
+                    <span class="contact-link-arrow">→</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="logo">ARFOOD.STUDIO</div>
+        <div class="copyright">© 2026 Himmatpreet Singh. All rights reserved.</div>
+    </footer>
+
+    <script>
+    // ===== MODEL DATA =====
+    const models = [
+        {
+            name: 'Chainsaw',
+            category: 'AR TOOL',
+            badge: 'new',
+            image: 'chainsaw.png',
+            glb: 'chainsaw.glb',
+            triangles: '~50K',
+            format: 'GLB',
+            type: 'game'
+        },
+        {
+            name: 'Red Car',
+            category: 'AR VEHICLE',
+            badge: 'game',
+            image: 'car.png',
+            glb: 'car.glb',
+            triangles: '~120K',
+            format: 'GLB',
+            type: 'game'
+        },
+        {
+            name: 'Pickup Truck',
+            category: 'AR VEHICLE',
+            badge: 'game',
+            image: 'truck.png',
+            glb: 'truck.glb',
+            triangles: '~150K',
+            format: 'GLB',
+            type: 'game'
+        },
+        {
+            name: 'Bicycle',
+            category: 'AR VEHICLE',
+            badge: 'game',
+            image: 'cycle.png',
+            glb: 'cycle.glb',
+            triangles: '~80K',
+            format: 'GLB',
+            type: 'game'
+        },
+        {
+            name: 'Human Character',
+            category: 'AR CHARACTER',
+            badge: 'game',
+            image: 'human.png',
+            glb: 'human.glb',
+            triangles: '~35K',
+            format: 'GLB',
+            type: 'game'
+        },
+        {
+            name: 'Fantasy Warrior',
+            category: 'AR CHARACTER',
+            badge: 'new',
+            image: 'fantasy.png',
+            glb: 'fantasy.glb',
+            triangles: '~45K',
+            format: 'GLB',
+            type: 'game'
+        },
+        {
+            name: 'Burger',
+            category: 'AR FOOD',
+            badge: 'ar',
+            image: 'hamburger.png',
+            glb: '',
+            triangles: '4398.5K',
+            format: 'GLB',
+            type: 'ar'
+        },
+        {
+            name: 'Pizza',
+            category: 'AR FOOD',
+            badge: 'ar',
+            image: 'pizza.png',
+            glb: '',
+            triangles: '959.6K',
+            format: 'GLB',
+            type: 'ar'
+        },
+        {
+            name: 'Cold Coffee',
+            category: 'AR FOOD',
+            badge: 'ar',
+            image: 'coldcoffee.png',
+            glb: '',
+            triangles: '896.5K',
+            format: 'GLB',
+            type: 'ar'
+        },
+        {
+            name: 'Orange Chair',
+            category: 'AR FURNITURE',
+            badge: 'ar',
+            image: 'chair.png',
+            glb: '',
+            triangles: '30.0K',
+            format: 'GLB',
+            type: 'ar'
+        },
+        {
+            name: 'Alien',
+            category: 'AR CREATURE',
+            badge: 'ar',
+            image: 'alien.png',
+            glb: '',
+            triangles: '24.2K',
+            format: 'GLB',
+            type: 'ar'
+        },
+        {
+            name: 'PS5 Console',
+            category: 'AR ELECTRONICS',
+            badge: 'ar',
+            image: 'ps.png',
+            glb: '',
+            triangles: '991.4K',
+            format: 'GLB',
+            type: 'ar'
+        }
+    ];
+
+    // ===== BUILD MODEL GRID =====
+    const grid = document.getElementById('modelGrid');
+    models.forEach((model, i) => {
+        const card = document.createElement('div');
+        card.className = 'model-card';
+        const badgeClass = model.badge === 'new' ? 'badge-new' : model.badge === 'game' ? 'badge-game' : 'badge-ar';
+        const badgeText = model.badge === 'new' ? 'NEW' : model.badge === 'game' ? 'GAME READY' : 'AR READY';
+        card.innerHTML = `
+            <div class="model-preview">
+                <img src="${model.image}" alt="${model.name}" onerror="this.src='';this.parentElement.style.background='linear-gradient(135deg,#6c63ff22,#3b82f622)';">
+                <div class="model-badge ${badgeClass}">${badgeText}</div>
+            </div>
+            <div class="model-info">
+                <div class="model-name">${model.name}</div>
+                <div class="model-meta">${model.category} · ${model.triangles} triangles</div>
+                <button class="view-btn" onclick="openViewer(${i})">VIEW IN 3D →</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+
+    // ===== 3D VIEWER =====
+    let scene, camera, renderer, controls, currentModel, animationId;
+    const canvas = document.getElementById('modelViewer');
+
+    function initViewer() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf5f7fa);
+
+        camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+        camera.position.set(3, 2, 5);
+
+        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 2;
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(5, 10, 5);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        const hemiLight = new THREE.HemisphereLight(0x6c63ff, 0x3b82f6, 0.3);
+        scene.add(hemiLight);
+
+        const pointLight = new THREE.PointLight(0x6c63ff, 0.5, 20);
+        pointLight.position.set(-3, 3, 3);
+        scene.add(pointLight);
+
+        // Ground plane
+        const groundGeo = new THREE.CircleGeometry(4, 64);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.9 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.01;
+        ground.receiveShadow = true;
+        ground.name = 'ground';
+        scene.add(ground);
+
+        // Grid
+        const gridHelper = new THREE.GridHelper(8, 20, 0xcccccc, 0xeeeeee);
+        gridHelper.position.y = 0;
+        scene.add(gridHelper);
+
+        animate();
+    }
+
+    function animate() {
+        animationId = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    function openViewer(index) {
+        const model = models[index];
+        document.getElementById('viewerTitle').textContent = model.name;
+        document.getElementById('viewerMeta').textContent = `${model.category} · ${model.triangles} triangles · ${model.format}`;
+        document.getElementById('viewerOverlay').classList.add('active');
+        document.getElementById('loadingSpinner').style.display = 'block';
+
+        if (!scene) initViewer();
+
+        // Clear previous model
+        if (currentModel) {
+            scene.remove(currentModel);
+            currentModel = null;
+        }
+
+        if (model.glb) {
+            // Load GLB file
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                model.glb,
+                function(gltf) {
+                    currentModel = gltf.scene;
+
+                    // Center and scale
+                    const box = new THREE.Box3().setFromObject(currentModel);
+                    const center = box.getCenter(new THREE.Vector3());
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+                    const scale = 3 / maxDim;
+                    currentModel.scale.set(scale, scale, scale);
+                    currentModel.position.sub(center.multiplyScalar(scale));
+                    currentModel.position.y += (size.y * scale) / 2;
+
+                    currentModel.traverse(child => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+
+                    scene.add(currentModel);
+                    document.getElementById('loadingSpinner').style.display = 'none';
+                },
+                undefined,
+                function(error) {
+                    console.warn('GLB load failed:', error);
+                    // Fallback: show colored placeholder
+                    showPlaceholder(model);
+                }
+            );
+        } else {
+            // For models without GLB file, show image as textured plane
+            showPlaceholder(model);
+        }
+
+        // Resize observer
+        setTimeout(resizeViewer, 100);
+    }
+
+    function showPlaceholder(model) {
+        document.getElementById('loadingSpinner').style.display = 'none';
+        // Create a colored geometric representation
+        const colors = {
+            'Chainsaw': 0xff6b35,
+            'Red Car': 0xff0000,
+            'Pickup Truck': 0xffcc00,
+            'Bicycle': 0x333333,
+            'Human Character': 0x4a90d9,
+            'Fantasy Warrior': 0xff6b6b,
+            'Burger': 0xffaa00,
+            'Pizza': 0xff4444,
+            'Cold Coffee': 0x8B4513,
+            'Orange Chair': 0xff8c00,
+            'Alien': 0x00ff88,
+            'PS5 Console': 0x333333
+        };
+
+        const color = colors[model.name] || 0x6c63ff;
+        const geo = new THREE.IcosahedronGeometry(1.5, 2);
+        const mat = new THREE.MeshStandardMaterial({
+            color: color,
+            wireframe: false,
+            roughness: 0.3,
+            metalness: 0.2
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow = true;
+        mesh.position.y = 1.5;
+        scene.add(mesh);
+        currentModel = mesh;
+
+        // Add wireframe overlay
+        const wireMat = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true, transparent: true, opacity: 0.1 });
+        const wireMesh = new THREE.Mesh(new THREE.IcosahedronGeometry(1.55, 2), wireMat);
+        wireMesh.position.y = 1.5;
+        scene.add(wireMesh);
+
+        // Store both for cleanup
+        const group = new THREE.Group();
+        group.add(mesh);
+        group.add(wireMesh);
+        scene.remove(mesh);
+        scene.remove(wireMesh);
+        scene.add(group);
+        currentModel = group;
+    }
+
+    function resizeViewer() {
+        const container = document.querySelector('.viewer-container');
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    // Close viewer
+    document.getElementById('viewerClose').addEventListener('click', () => {
+        document.getElementById('viewerOverlay').classList.remove('active');
+        if (animationId) cancelAnimationFrame(animationId);
+    });
+    document.getElementById('viewerOverlay').addEventListener('click', (e) => {
+        if (e.target === document.getElementById('viewerOverlay')) {
+            document.getElementById('viewerOverlay').classList.remove('active');
+            if (animationId) cancelAnimationFrame(animationId);
+        }
+    });
+
+    // Toolbar buttons
+    document.getElementById('btnReset').addEventListener('click', () => {
+        camera.position.set(3, 2, 5);
+        controls.target.set(0, 1, 0);
+        controls.update();
+    });
+    document.getElementById('btnAutoRotate').addEventListener('click', () => {
+        controls.autoRotate = !controls.autoRotate;
+    });
+    document.getElementById('btnFullscreen').addEventListener('click', () => {
+        const container = document.querySelector('.viewer-container');
+        if (container.requestFullscreen) container.requestFullscreen();
+    });
+
+    // Smooth scroll for nav
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+    </script>
+</body>
+</html>
