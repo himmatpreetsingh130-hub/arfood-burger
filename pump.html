@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Push-up Counter - PoseNet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: monospace;
+            background: #0a0e27;
+            color: #f0f0f0;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #00ff88;
+        }
+
+        .status {
+            text-align: center;
+            padding: 1rem;
+            background: #1a1f3a;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 2px solid #888888;
+        }
+
+        .status.ready {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+
+        .status.error {
+            border-color: #ff006e;
+            color: #ff006e;
+        }
+
+        .status.loading {
+            border-color: #888888;
+            color: #888888;
+        }
+
+        .button-group {
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        button {
+            background: #00ff88;
+            color: #0a0e27;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0.5rem;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .camera-section {
+            position: relative;
+            background: #000;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            aspect-ratio: 4/3;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .rep-counter {
+            font-size: 4rem;
+            text-align: center;
+            color: #00ff88;
+            font-weight: bold;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .debug-panel {
+            background: #1a1f3a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .debug-title {
+            color: #00ff88;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .debug-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #333344;
+        }
+
+        .debug-item:last-child {
+            border-bottom: none;
+        }
+
+        .debug-label {
+            color: #888888;
+        }
+
+        .debug-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .console-log {
+            background: #000;
+            border: 1px solid #333344;
+            border-radius: 4px;
+            padding: 1rem;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .console-log div {
+            padding: 0.25rem 0;
+            color: #00ff88;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Push-up Counter (PoseNet)</h1>
+
+        <div class="status loading" id="status">
+            Loading TensorFlow.js...
+        </div>
+
+        <div class="button-group">
+            <button onclick="startCamera()">Start Camera</button>
+            <button onclick="stopCamera()">Stop Camera</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="camera-section">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="rep-counter" id="repCounter">0</div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📊 Data</div>
+            <div class="debug-item">
+                <span class="debug-label">Status:</span>
+                <span class="debug-value" id="detectionStatus">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Left Elbow Angle:</span>
+                <span class="debug-value" id="leftAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Right Elbow Angle:</span>
+                <span class="debug-value" id="rightAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Average Angle:</span>
+                <span class="debug-value" id="avgAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Rep State:</span>
+                <span class="debug-value" id="repState">UP</span>
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📝 Console</div>
+            <div class="console-log" id="console"></div>
+        </div>
+    </div>
+
+    <!-- Load TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4"></script>
+    <!-- Load PoseNet -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet@2"></script>
+
+    <script>
+        let video = null;
+        let canvas = null;
+        let ctx = null;
+        let net = null;
+        let repCount = 0;
+        let repState = "UP";
+        let lastRepTime = 0;
+        let logs = [];
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            logs.push(logEntry);
+            if (logs.length > 50) logs.shift();
+            const consoleEl = document.getElementById("console");
+            consoleEl.innerHTML = logs.map(l => `<div>${l}</div>`).join("");
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById("console").innerHTML = "";
+        }
+
+        function updateStatus(message, type) {
+            const status = document.getElementById("status");
+            status.textContent = message;
+            status.className = "status " + type;
+        }
+
+        async function loadPoseNet() {
+            try {
+                log("Loading PoseNet model...");
+                updateStatus("Loading PoseNet...", "loading");
+                net = await posenet.load();
+                log("✓ PoseNet loaded successfully!");
+                updateStatus("Ready! Do a push-up", "ready");
+                return true;
+            } catch (err) {
+                log("ERROR loading PoseNet: " + err.message);
+                updateStatus("ERROR: " + err.message, "error");
+                return false;
+            }
+        }
+
+        async function startCamera() {
+            try {
+                updateStatus("Requesting camera...", "loading");
+                log("Requesting camera access...");
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+
+                video = document.getElementById("video");
+                canvas = document.getElementById("canvas");
+                ctx = canvas.getContext("2d");
+
+                video.srcObject = stream;
+                video.onloadedmetadata = async () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    log("Camera ready: " + video.videoWidth + "x" + video.videoHeight);
+                    
+                    if (!net) {
+                        const loaded = await loadPoseNet();
+                        if (!loaded) return;
+                    }
+                    
+                    detectPose();
+                };
+            } catch (err) {
+                updateStatus("Camera error: " + err.message, "error");
+                log("ERROR: " + err.message);
+            }
+        }
+
+        function stopCamera() {
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                updateStatus("Camera stopped", "loading");
+                log("Camera stopped");
+            }
+        }
+
+        async function detectPose() {
+            if (!video || !net || !video.srcObject) return;
+
+            try {
+                const pose = await net.estimateSinglePose(video, {
+                    flipHorizontal: false
+                });
+
+                if (pose.keypoints) {
+                    handlePose(pose.keypoints);
+                }
+
+                drawPose(pose.keypoints);
+            } catch (err) {
+                log("Detection error: " + err.message);
+            }
+
+            requestAnimationFrame(detectPose);
+        }
+
+        function handlePose(keypoints) {
+            // PoseNet keypoint indices:
+            // 5 = left shoulder, 6 = right shoulder
+            // 7 = left elbow, 8 = right elbow
+            // 9 = left wrist, 10 = right wrist
+
+            const leftShoulder = keypoints[5];
+            const leftElbow = keypoints[7];
+            const leftWrist = keypoints[9];
+            const rightShoulder = keypoints[6];
+            const rightElbow = keypoints[8];
+            const rightWrist = keypoints[10];
+
+            if (leftElbow.score > 0.5 && leftShoulder.score > 0.5 && leftWrist.score > 0.5) {
+                const leftAngle = calculateAngle(leftShoulder.position, leftElbow.position, leftWrist.position);
+                document.getElementById("leftAngle").textContent = leftAngle.toFixed(1) + "°";
+            }
+
+            if (rightElbow.score > 0.5 && rightShoulder.score > 0.5 && rightWrist.score > 0.5) {
+                const rightAngle = calculateAngle(rightShoulder.position, rightElbow.position, rightWrist.position);
+                document.getElementById("rightAngle").textContent = rightAngle.toFixed(1) + "°";
+            }
+
+            // Calculate average angle
+            if (leftElbow.score > 0.5 && rightElbow.score > 0.5 && 
+                leftShoulder.score > 0.5 && rightShoulder.score > 0.5 &&
+                leftWrist.score > 0.5 && rightWrist.score > 0.5) {
+                
+                const leftAngle = calculateAngle(leftShoulder.position, leftElbow.position, leftWrist.position);
+                const rightAngle = calculateAngle(rightShoulder.position, rightElbow.position, rightWrist.position);
+                const avgAngle = (leftAngle + rightAngle) / 2;
+
+                document.getElementById("avgAngle").textContent = avgAngle.toFixed(1) + "°";
+                updateRepCount(avgAngle);
+            }
+        }
+
+        function calculateAngle(a, b, c) {
+            const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs((radians * 180) / Math.PI);
+            if (angle > 180) angle = 360 - angle;
+            return angle;
+        }
+
+        function updateRepCount(angle) {
+            const now = Date.now();
+            const debounceTime = 300;
+
+            if (angle < 90 && repState === "UP") {
+                repState = "DOWN";
+                log("DOWN: " + angle.toFixed(1) + "°");
+                document.getElementById("repState").textContent = "DOWN";
+            } else if (angle > 160 && repState === "DOWN") {
+                if (now - lastRepTime > debounceTime) {
+                    repCount++;
+                    lastRepTime = now;
+                    log("✓ REP! Total: " + repCount);
+                    document.getElementById("repCounter").textContent = repCount;
+                    if ("vibrate" in navigator) navigator.vibrate(50);
+                }
+                repState = "UP";
+                log("UP: " + angle.toFixed(1) + "°");
+                document.getElementById("repState").textContent = "UP";
+            }
+        }
+
+        function drawPose(keypoints) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw skeleton connections
+            const connections = [
+                [5, 7], [7, 9],   // Left arm
+                [6, 8], [8, 10],  // Right arm
+                [5, 6],           // Shoulders
+                [5, 11], [6, 12]  // Torso
+            ];
+
+            ctx.strokeStyle = "#00ff88";
+            ctx.lineWidth = 3;
+
+            connections.forEach(([start, end]) => {
+                const kp1 = keypoints[start];
+                const kp2 = keypoints[end];
+                if (kp1.score > 0.5 && kp2.score > 0.5) {
+                    ctx.beginPath();
+                    ctx.moveTo(kp1.position.x, kp1.position.y);
+                    ctx.lineTo(kp2.position.x, kp2.position.y);
+                    ctx.stroke();
+                }
+            });
+
+            // Draw keypoints
+            ctx.fillStyle = "#ffff00";
+            keypoints.forEach(kp => {
+                if (kp.score > 0.5) {
+                    ctx.beginPath();
+                    ctx.arc(kp.position.x, kp.position.y, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+
+            // Highlight elbows
+            ctx.fillStyle = "#ff006e";
+            if (keypoints[7].score > 0.5) {
+                ctx.beginPath();
+                ctx.arc(keypoints[7].position.x, keypoints[7].position.y, 8, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            if (keypoints[8].score > 0.5) {
+                ctx.beginPath();
+                ctx.arc(keypoints[8].position.x, keypoints[8].position.y, 8, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        window.onload = () => {
+            log("Ready. Click 'Start Camera'");
+        };
+    </script>
+</body>
+</html>
