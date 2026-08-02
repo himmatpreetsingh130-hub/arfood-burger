@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pose Detection - MediaPipe (Alternative CDN)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: monospace;
+            background: #0a0e27;
+            color: #f0f0f0;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #00ff88;
+        }
+
+        .status {
+            text-align: center;
+            padding: 1rem;
+            background: #1a1f3a;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border: 2px solid #888888;
+        }
+
+        .status.ready {
+            border-color: #00ff88;
+            color: #00ff88;
+        }
+
+        .status.error {
+            border-color: #ff006e;
+            color: #ff006e;
+        }
+
+        .status.loading {
+            border-color: #888888;
+            color: #888888;
+        }
+
+        .button-group {
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        button {
+            background: #00ff88;
+            color: #0a0e27;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0.5rem;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .camera-section {
+            position: relative;
+            background: #000;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+            aspect-ratio: 4/3;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay-text {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .rep-counter {
+            font-size: 4rem;
+            text-align: center;
+            color: #00ff88;
+            font-weight: bold;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .debug-panel {
+            background: #1a1f3a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .debug-title {
+            color: #00ff88;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .debug-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #333344;
+        }
+
+        .debug-item:last-child {
+            border-bottom: none;
+        }
+
+        .debug-label {
+            color: #888888;
+        }
+
+        .debug-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .console-log {
+            background: #000;
+            border: 1px solid #333344;
+            border-radius: 4px;
+            padding: 1rem;
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .console-log div {
+            padding: 0.25rem 0;
+            color: #00ff88;
+        }
+
+        .cdn-list {
+            background: #1a1f3a;
+            border: 1px solid #333344;
+            border-radius: 4px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+        }
+
+        .cdn-item {
+            padding: 0.5rem 0;
+            color: #888888;
+        }
+
+        .cdn-item.active {
+            color: #00ff88;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Pose Detection v2 (Alternative CDN)</h1>
+
+        <div class="status loading" id="status">
+            Initializing...
+        </div>
+
+        <div class="cdn-list">
+            <div class="debug-title">📡 CDN Sources</div>
+            <div class="cdn-item" id="cdn1">❌ jsDelivr (cdn.jsdelivr.net)</div>
+            <div class="cdn-item" id="cdn2">❌ unpkg.com</div>
+            <div class="cdn-item" id="cdn3">❌ esm.sh</div>
+            <div class="cdn-item" id="cdn4">❌ skypack.dev</div>
+        </div>
+
+        <div class="button-group">
+            <button onclick="startCamera()">Start Camera</button>
+            <button onclick="stopCamera()">Stop Camera</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="camera-section">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+            <div class="overlay-text" id="overlayText">Waiting...</div>
+        </div>
+
+        <div class="rep-counter" id="repCounter">0</div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📊 Data</div>
+            <div class="debug-item">
+                <span class="debug-label">Status:</span>
+                <span class="debug-value" id="detectionStatus">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Person Detected:</span>
+                <span class="debug-value" id="personDetected">No</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Left Elbow:</span>
+                <span class="debug-value" id="leftAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Right Elbow:</span>
+                <span class="debug-value" id="rightAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Average Angle:</span>
+                <span class="debug-value" id="avgAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Rep State:</span>
+                <span class="debug-value" id="repState">UP</span>
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📝 Console</div>
+            <div class="console-log" id="console"></div>
+        </div>
+    </div>
+
+    <!-- Load MediaPipe from multiple CDN sources -->
+    <script>
+        let video = null;
+        let canvas = null;
+        let ctx = null;
+        let poseDetector = null;
+        let repCount = 0;
+        let repState = "UP";
+        let lastRepTime = 0;
+        let logs = [];
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            logs.push(logEntry);
+            if (logs.length > 50) logs.shift();
+            const consoleEl = document.getElementById("console");
+            consoleEl.innerHTML = logs.map(l => `<div>${l}</div>`).join("");
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById("console").innerHTML = "";
+        }
+
+        function updateStatus(message, type) {
+            const status = document.getElementById("status");
+            status.textContent = message;
+            status.className = "status " + type;
+        }
+
+        // Try loading MediaPipe from different CDNs
+        async function loadMediaPipe() {
+            const cdnSources = [
+                {
+                    name: "jsDelivr",
+                    url: "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635989137/pose.min.js",
+                    id: "cdn1"
+                },
+                {
+                    name: "unpkg",
+                    url: "https://unpkg.com/@mediapipe/pose@0.5.1635989137/pose.min.js",
+                    id: "cdn2"
+                },
+                {
+                    name: "esm.sh",
+                    url: "https://esm.sh/@mediapipe/pose@0.5.1635989137",
+                    id: "cdn3"
+                },
+                {
+                    name: "skypack",
+                    url: "https://cdn.skypack.dev/@mediapipe/pose@0.5.1635989137",
+                    id: "cdn4"
+                }
+            ];
+
+            for (const source of cdnSources) {
+                try {
+                    log(`Trying ${source.name}...`);
+                    updateStatus(`Trying ${source.name}...`, "loading");
+
+                    const script = document.createElement("script");
+                    script.src = source.url;
+                    script.async = true;
+
+                    await new Promise((resolve, reject) => {
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+
+                    if (window.Pose) {
+                        log(`✓ ${source.name} loaded successfully!`);
+                        document.getElementById(source.id).textContent = `✓ ${source.name} (LOADED)`;
+                        document.getElementById(source.id).className = "cdn-item active";
+                        return true;
+                    }
+                } catch (err) {
+                    log(`✗ ${source.name} failed: ${err.message}`);
+                    document.getElementById(source.id).textContent = `✗ ${source.name} (failed)`;
+                }
+            }
+
+            log("ERROR: All CDN sources failed!");
+            updateStatus("ERROR: Could not load MediaPipe from any CDN", "error");
+            return false;
+        }
+
+        async function startCamera() {
+            try {
+                updateStatus("Requesting camera...", "loading");
+                log("Requesting camera access...");
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+
+                video = document.getElementById("video");
+                canvas = document.getElementById("canvas");
+                ctx = canvas.getContext("2d");
+
+                video.srcObject = stream;
+                video.onloadedmetadata = async () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    log("Camera ready: " + video.videoWidth + "x" + video.videoHeight);
+                    updateStatus("Loading MediaPipe Pose...", "loading");
+                    
+                    const loaded = await loadMediaPipe();
+                    if (loaded) {
+                        initPoseDetection();
+                    }
+                };
+            } catch (err) {
+                updateStatus("Camera error: " + err.message, "error");
+                log("ERROR: " + err.message);
+            }
+        }
+
+        function stopCamera() {
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                updateStatus("Camera stopped", "loading");
+                log("Camera stopped");
+            }
+        }
+
+        function initPoseDetection() {
+            try {
+                const Pose = window.Pose;
+                if (!Pose) throw new Error("Pose not found in window");
+
+                poseDetector = new Pose({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635989137/${file}`,
+                });
+
+                poseDetector.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5,
+                });
+
+                poseDetector.onResults(handlePoseResults);
+                updateStatus("Ready! Do a push-up", "ready");
+                log("MediaPipe Pose initialized");
+
+                detectPose();
+            } catch (err) {
+                updateStatus("ERROR: " + err.message, "error");
+                log("ERROR: " + err.message);
+            }
+        }
+
+        function handlePoseResults(results) {
+            if (!results.poseLandmarks || results.poseLandmarks.length === 0) {
+                document.getElementById("personDetected").textContent = "No";
+                document.getElementById("overlayText").textContent = "Get in frame!";
+                return;
+            }
+
+            document.getElementById("personDetected").textContent = "Yes ✓";
+            document.getElementById("overlayText").textContent = "Detecting...";
+
+            const landmarks = results.poseLandmarks;
+            const leftShoulder = landmarks[11];
+            const leftElbow = landmarks[13];
+            const leftWrist = landmarks[15];
+            const rightShoulder = landmarks[12];
+            const rightElbow = landmarks[14];
+            const rightWrist = landmarks[16];
+
+            const leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+            const rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+            const avgAngle = (leftAngle + rightAngle) / 2;
+
+            document.getElementById("leftAngle").textContent = leftAngle.toFixed(1) + "°";
+            document.getElementById("rightAngle").textContent = rightAngle.toFixed(1) + "°";
+            document.getElementById("avgAngle").textContent = avgAngle.toFixed(1) + "°";
+
+            updateRepCount(avgAngle);
+            drawSkeleton(landmarks);
+        }
+
+        function calculateAngle(a, b, c) {
+            const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs((radians * 180) / Math.PI);
+            if (angle > 180) angle = 360 - angle;
+            return angle;
+        }
+
+        function updateRepCount(angle) {
+            const now = Date.now();
+            const debounceTime = 300;
+
+            if (angle < 90 && repState === "UP") {
+                repState = "DOWN";
+                log("DOWN: " + angle.toFixed(1) + "°");
+                document.getElementById("repState").textContent = "DOWN";
+            } else if (angle > 160 && repState === "DOWN") {
+                if (now - lastRepTime > debounceTime) {
+                    repCount++;
+                    lastRepTime = now;
+                    log("✓ REP! Total: " + repCount);
+                    document.getElementById("repCounter").textContent = repCount;
+                    if ("vibrate" in navigator) navigator.vibrate(50);
+                }
+                repState = "UP";
+                log("UP: " + angle.toFixed(1) + "°");
+                document.getElementById("repState").textContent = "UP";
+            }
+        }
+
+        function drawSkeleton(landmarks) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const connections = [
+                [11, 13], [13, 15],
+                [12, 14], [14, 16],
+                [11, 12],
+                [11, 23], [12, 24],
+            ];
+
+            ctx.strokeStyle = "#00ff88";
+            ctx.lineWidth = 3;
+
+            connections.forEach(([start, end]) => {
+                const p1 = landmarks[start];
+                const p2 = landmarks[end];
+                if (p1.visibility > 0.5 && p2.visibility > 0.5) {
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                    ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    ctx.stroke();
+                }
+            });
+
+            ctx.fillStyle = "#ffff00";
+            landmarks.forEach(landmark => {
+                if (landmark.visibility > 0.5) {
+                    ctx.beginPath();
+                    ctx.arc(landmark.x * canvas.width, landmark.y * canvas.height, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+
+            const leftElbow = landmarks[13];
+            const rightElbow = landmarks[14];
+            ctx.fillStyle = "#ff006e";
+            if (leftElbow.visibility > 0.5) {
+                ctx.beginPath();
+                ctx.arc(leftElbow.x * canvas.width, leftElbow.y * canvas.height, 8, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            if (rightElbow.visibility > 0.5) {
+                ctx.beginPath();
+                ctx.arc(rightElbow.x * canvas.width, rightElbow.y * canvas.height, 8, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        function detectPose() {
+            if (video && poseDetector && video.srcObject) {
+                poseDetector.send({ image: video });
+            }
+            requestAnimationFrame(detectPose);
+        }
+
+        window.onload = () => {
+            log("Ready. Click 'Start Camera'");
+        };
+    </script>
+</body>
+</html>
