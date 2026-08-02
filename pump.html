@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pose Detection Debug - MediaPipe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: monospace;
+            background: #0a0e27;
+            color: #f0f0f0;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 1rem;
+            color: #00ff88;
+        }
+
+        .camera-section {
+            position: relative;
+            background: #000;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .debug-panel {
+            background: #1a1f3a;
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .debug-title {
+            color: #00ff88;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .debug-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #333344;
+        }
+
+        .debug-item:last-child {
+            border-bottom: none;
+        }
+
+        .debug-label {
+            color: #888888;
+        }
+
+        .debug-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .debug-value.warning {
+            color: #ff006e;
+        }
+
+        .rep-counter {
+            font-size: 3rem;
+            text-align: center;
+            color: #00ff88;
+            font-weight: bold;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px #00ff88;
+        }
+
+        .status {
+            text-align: center;
+            padding: 1rem;
+            background: #1a1f3a;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .status.ready {
+            border: 2px solid #00ff88;
+            color: #00ff88;
+        }
+
+        .status.error {
+            border: 2px solid #ff006e;
+            color: #ff006e;
+        }
+
+        .status.loading {
+            border: 2px solid #888888;
+            color: #888888;
+        }
+
+        .console-log {
+            background: #000;
+            border: 1px solid #333344;
+            border-radius: 4px;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .console-log div {
+            padding: 0.25rem 0;
+            color: #00ff88;
+        }
+
+        button {
+            background: #00ff88;
+            color: #0a0e27;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .button-group {
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        .angle-indicator {
+            display: flex;
+            justify-content: space-around;
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #1a1f3a;
+            border-radius: 8px;
+        }
+
+        .angle-box {
+            text-align: center;
+        }
+
+        .angle-box-label {
+            color: #888888;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .angle-box-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00ff88;
+        }
+
+        .angle-box-value.down {
+            color: #ff006e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Pose Detection Debug</h1>
+
+        <div class="status loading" id="status">
+            Loading MediaPipe Pose...
+        </div>
+
+        <div class="button-group">
+            <button onclick="startCamera()">Start Camera</button>
+            <button onclick="stopCamera()">Stop Camera</button>
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="camera-section">
+            <video id="video" autoplay playsinline></video>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <div class="rep-counter" id="repCounter">0</div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📊 Pose Detection Data</div>
+            <div class="debug-item">
+                <span class="debug-label">Status:</span>
+                <span class="debug-value" id="detectionStatus">Waiting for camera...</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Person in frame:</span>
+                <span class="debug-value" id="personDetected">No</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Left Elbow Angle:</span>
+                <span class="debug-value" id="leftAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Right Elbow Angle:</span>
+                <span class="debug-value" id="rightAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Average Angle:</span>
+                <span class="debug-value" id="avgAngle">--</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Rep State:</span>
+                <span class="debug-value" id="repState">UP</span>
+            </div>
+            <div class="debug-item">
+                <span class="debug-label">Last Rep Time:</span>
+                <span class="debug-value" id="lastRepTime">--</span>
+            </div>
+        </div>
+
+        <div class="angle-indicator">
+            <div class="angle-box">
+                <div class="angle-box-label">UP (Extended)</div>
+                <div class="angle-box-label">&gt; 160°</div>
+            </div>
+            <div class="angle-box">
+                <div class="angle-box-label">DOWN (Bent)</div>
+                <div class="angle-box-label">&lt; 90°</div>
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-title">📝 Console Log</div>
+            <div class="console-log" id="console"></div>
+        </div>
+    </div>
+
+    <script>
+        let video = null;
+        let canvas = null;
+        let ctx = null;
+        let poseDetector = null;
+        let repCount = 0;
+        let repState = "UP";
+        let lastRepTime = 0;
+        let logs = [];
+
+        // Custom console log
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            logs.push(logEntry);
+            if (logs.length > 50) logs.shift();
+
+            const consoleEl = document.getElementById("console");
+            consoleEl.innerHTML = logs.map(l => `<div>${l}</div>`).join("");
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+
+        function clearLogs() {
+            logs = [];
+            document.getElementById("console").innerHTML = "";
+        }
+
+        // Start camera
+        async function startCamera() {
+            try {
+                updateStatus("Requesting camera access...", "loading");
+                log("Requesting camera access...");
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+
+                video = document.getElementById("video");
+                canvas = document.getElementById("canvas");
+                ctx = canvas.getContext("2d");
+
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    updateStatus("Camera ready. Loading MediaPipe...", "loading");
+                    log("Camera ready. Video size: " + video.videoWidth + "x" + video.videoHeight);
+                    initPoseDetection();
+                };
+            } catch (err) {
+                updateStatus("Camera access denied: " + err.message, "error");
+                log("ERROR: " + err.message);
+            }
+        }
+
+        // Stop camera
+        function stopCamera() {
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                updateStatus("Camera stopped", "loading");
+                log("Camera stopped");
+            }
+        }
+
+        // Initialize MediaPipe Pose
+        function initPoseDetection() {
+            const script = document.createElement("script");
+            script.src = "https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635989137/pose.min.js";
+            document.head.appendChild(script);
+
+            script.onload = () => {
+                log("MediaPipe script loaded");
+                const Pose = window.Pose;
+                if (!Pose) {
+                    updateStatus("ERROR: Pose not found in window", "error");
+                    log("ERROR: Pose not found");
+                    return;
+                }
+
+                poseDetector = new Pose({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1635989137/${file}`,
+                });
+
+                poseDetector.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5,
+                });
+
+                poseDetector.onResults(handlePoseResults);
+                updateStatus("MediaPipe Pose loaded. Ready!", "ready");
+                log("MediaPipe Pose initialized successfully");
+
+                detectPose();
+            };
+
+            script.onerror = () => {
+                updateStatus("ERROR: Failed to load MediaPipe script", "error");
+                log("ERROR: Failed to load MediaPipe script");
+            };
+        }
+
+        // Handle pose results
+        function handlePoseResults(results) {
+            if (!results.poseLandmarks || results.poseLandmarks.length === 0) {
+                document.getElementById("personDetected").textContent = "No";
+                document.getElementById("detectionStatus").textContent = "No person detected";
+                return;
+            }
+
+            document.getElementById("personDetected").textContent = "Yes ✓";
+            const landmarks = results.poseLandmarks;
+
+            // Get landmarks
+            const leftShoulder = landmarks[11];
+            const leftElbow = landmarks[13];
+            const leftWrist = landmarks[15];
+            const rightShoulder = landmarks[12];
+            const rightElbow = landmarks[14];
+            const rightWrist = landmarks[16];
+
+            // Calculate angles
+            const leftAngle = calculateAngle(leftShoulder, leftElbow, leftWrist);
+            const rightAngle = calculateAngle(rightShoulder, rightElbow, rightWrist);
+            const avgAngle = (leftAngle + rightAngle) / 2;
+
+            // Update debug display
+            document.getElementById("leftAngle").textContent = leftAngle.toFixed(1) + "°";
+            document.getElementById("rightAngle").textContent = rightAngle.toFixed(1) + "°";
+            document.getElementById("avgAngle").textContent = avgAngle.toFixed(1) + "°";
+            document.getElementById("detectionStatus").textContent = "Detecting...";
+
+            // Update rep state
+            updateRepCount(avgAngle);
+
+            // Draw skeleton
+            drawSkeleton(landmarks);
+        }
+
+        // Calculate angle between 3 points
+        function calculateAngle(a, b, c) {
+            const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+            let angle = Math.abs((radians * 180) / Math.PI);
+            if (angle > 180) angle = 360 - angle;
+            return angle;
+        }
+
+        // Update rep count
+        function updateRepCount(angle) {
+            const now = Date.now();
+            const debounceTime = 300;
+
+            document.getElementById("repState").textContent = repState;
+
+            // State machine
+            if (angle < 90 && repState === "UP") {
+                repState = "DOWN";
+                log("State: DOWN (arm bent, angle: " + angle.toFixed(1) + "°)");
+                document.getElementById("repState").textContent = "DOWN";
+            } else if (angle > 160 && repState === "DOWN") {
+                if (now - lastRepTime > debounceTime) {
+                    repCount++;
+                    lastRepTime = now;
+                    log("✓ REP COUNTED! Total: " + repCount);
+                    document.getElementById("repCounter").textContent = repCount;
+                    if ("vibrate" in navigator) navigator.vibrate(50);
+                }
+                repState = "UP";
+                log("State: UP (arm extended, angle: " + angle.toFixed(1) + "°)");
+                document.getElementById("repState").textContent = "UP";
+            }
+
+            document.getElementById("lastRepTime").textContent = ((now - lastRepTime) / 1000).toFixed(2) + "s ago";
+        }
+
+        // Draw skeleton
+        function drawSkeleton(landmarks) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const connections = [
+                [11, 13], [13, 15], // Left arm
+                [12, 14], [14, 16], // Right arm
+                [11, 12], // Shoulders
+                [11, 23], [12, 24], // Torso
+            ];
+
+            // Draw connections
+            ctx.strokeStyle = "#00ff88";
+            ctx.lineWidth = 3;
+
+            connections.forEach(([start, end]) => {
+                const p1 = landmarks[start];
+                const p2 = landmarks[end];
+                if (p1.visibility > 0.5 && p2.visibility > 0.5) {
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
+                    ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
+                    ctx.stroke();
+                }
+            });
+
+            // Draw landmarks
+            ctx.fillStyle = "#ffff00";
+            landmarks.forEach((landmark, idx) => {
+                if (landmark.visibility > 0.5) {
+                    ctx.beginPath();
+                    ctx.arc(landmark.x * canvas.width, landmark.y * canvas.height, 6, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+
+            // Highlight elbow joints
+            const leftElbow = landmarks[13];
+            const rightElbow = landmarks[14];
+
+            ctx.fillStyle = "#ff006e";
+            if (leftElbow.visibility > 0.5) {
+                ctx.beginPath();
+                ctx.arc(leftElbow.x * canvas.width, leftElbow.y * canvas.height, 8, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+            if (rightElbow.visibility > 0.5) {
+                ctx.beginPath();
+                ctx.arc(rightElbow.x * canvas.width, rightElbow.y * canvas.height, 8, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        // Detection loop
+        function detectPose() {
+            if (video && poseDetector && video.srcObject) {
+                poseDetector.send({ image: video });
+            }
+            requestAnimationFrame(detectPose);
+        }
+
+        // Update status
+        function updateStatus(message, type) {
+            const status = document.getElementById("status");
+            status.textContent = message;
+            status.className = "status " + type;
+        }
+
+        // Start on load
+        window.onload = () => {
+            log("Page loaded. Click 'Start Camera' to begin.");
+        };
+    </script>
+</body>
+</html>
