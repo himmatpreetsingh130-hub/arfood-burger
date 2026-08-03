@@ -366,19 +366,19 @@
     <script>
     // ===== MODEL DATA — Exact files from your GitHub repo =====
     const models = [
-        { name: 'Chainsaw', category: 'AR TOOL', badge: 'new', image: 'chainsaw.png', glb: 'chainsaw.glb', triangles: '~50K' },
+        { name: 'Chainsaw', category: 'AR TOOL', badge: 'new', image: '', glb: 'chainsaw.glb', triangles: '~50K' },
         { name: 'Red Car', category: 'AR VEHICLE', badge: 'game', image: 'car.png', glb: 'car.glb', triangles: '~120K' },
         { name: 'Pickup Truck', category: 'AR VEHICLE', badge: 'game', image: 'truck.png', glb: 'truck.glb', triangles: '~150K' },
         { name: 'Bicycle', category: 'AR VEHICLE', badge: 'game', image: 'cycle.png', glb: 'cycle.glb', triangles: '~80K' },
         { name: 'Human Character', category: 'AR CHARACTER', badge: 'game', image: 'human.png', glb: 'human.glb', triangles: '~35K' },
-        { name: 'Fantasy Warrior', category: 'AR CHARACTER', badge: 'new', image: 'fantasy.glb', glb: 'fantasy.glb', triangles: '~45K' },
+        { name: 'Fantasy Warrior', category: 'AR CHARACTER', badge: 'new', image: '', glb: 'fantasy.glb', triangles: '~45K' },
         { name: 'Brownie', category: 'AR FOOD', badge: 'ar', image: 'brownie.png', glb: 'browni-v1.glb', triangles: '~15K' },
         { name: 'Coffee Cup', category: 'AR FOOD', badge: 'ar', image: 'coffee.png', glb: 'coffee-v1.glb', triangles: '~25K' },
         { name: 'Cold Coffee', category: 'AR FOOD', badge: 'ar', image: 'coldcoffee.png', glb: 'coldcoffee.glb', triangles: '~30K' },
         { name: 'Pizza', category: 'AR FOOD', badge: 'ar', image: 'pizza.png', glb: 'pizza.glb', triangles: '~12K' },
         { name: 'Burger', category: 'AR FOOD', badge: 'ar', image: 'hamburger.png', glb: 'burger.glb', triangles: '~18K' },
-        { name: 'Desert', category: 'AR FOOD', badge: 'ar', image: 'dessert.png', glb: '', triangles: '~20K' },
-        { name: 'Orange Chair', category: 'AR FURNITURE', badge: 'ar', image: 'orangearmch.png', glb: 'seat.glb', triangles: '~30K' },
+        { name: 'Desert', category: 'AR FOOD', badge: 'ar', image: 'desert.png', glb: 'signaturedessert.glb', triangles: '~20K' },
+        { name: 'Orange Chair', category: 'AR FURNITURE', badge: 'ar', image: 'chair.png', glb: 'orangearmchair.glb', triangles: '~30K' },
         { name: 'Seat', category: 'AR FURNITURE', badge: 'ar', image: 'seat.png', glb: 'seat.glb', triangles: '~27K' },
         { name: 'Knitted', category: 'AR APPAREL', badge: 'ar', image: 'knitted.png', glb: 'knitted.glb', triangles: '~478K' },
         { name: 'Alien', category: 'AR CREATURE', badge: 'ar', image: 'alien.png', glb: 'alien.glb', triangles: '~24K' },
@@ -550,6 +550,13 @@
         loadingText.textContent = 'Loading 3D Model...';
         document.getElementById('loadingBar').style.animation = 'loadPulse 1.5s ease-in-out infinite';
 
+        // Always restore loading overlay HTML
+        loadingOverlay.innerHTML = `
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">Loading 3D Model...</div>
+            <div class="loading-progress"><div class="loading-bar" id="loadingBar"></div></div>
+        `;
+
         if (!scene) initViewer();
         clearModel();
 
@@ -689,6 +696,13 @@
     function closeViewer() {
         document.getElementById('viewerOverlay').classList.remove('active');
         polyCounter.style.display = 'none';
+        loadingOverlay.style.display = 'flex';
+        // Restore loading overlay content
+        loadingOverlay.innerHTML = `
+            <div class="spinner"></div>
+            <div class="loading-text" id="loadingText">Loading 3D Model...</div>
+            <div class="loading-progress"><div class="loading-bar" id="loadingBar"></div></div>
+        `;
         if (animationId) cancelAnimationFrame(animationId);
     }
 
