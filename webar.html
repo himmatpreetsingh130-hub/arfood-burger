@@ -418,8 +418,11 @@
 
     const canvas = document.getElementById('modelViewer');
     const loadingOverlay = document.getElementById('loadingOverlay');
-    const loadingText = document.getElementById('loadingText');
     const polyCounter = document.getElementById('polyCounter');
+
+    // Helper: always get fresh loadingText reference (innerHTML replacements destroy it)
+    function getLoadingText() { return document.getElementById('loadingText'); }
+    function getLoadingBar() { return document.getElementById('loadingBar'); }
 
     function initViewer() {
         scene = new THREE.Scene();
@@ -568,7 +571,7 @@
                 const response = await fetch(model.glb);
                 if (!response.ok) throw new Error(`HTTP ${response.status}: File not found`);
                 
-                loadingText.textContent = `Processing ${model.name}...`;
+                getLoadingText().textContent = `Processing ${model.name}...`;
                 const blob = await response.blob();
                 const blobUrl = URL.createObjectURL(blob);
 
@@ -641,7 +644,7 @@
 
     function showModelLoading(model) {
         loadingOverlay.style.display = 'flex';
-        loadingText.textContent = `Loading ${model.name}...`;
+        getLoadingText().textContent = `Loading ${model.name}...`;
         polyCounter.style.display = 'none';
     }
 
