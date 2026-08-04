@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PUMP UP | Pro Fitness</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&family=Syncopate:wght@700&display=swap');
+  
+  :root {
+    --ink: #050604;
+    --bone: #f3efe4;
+    --ember: #ff5a1f;
+    --ember-glow: rgba(255, 90, 31, 0.4);
+    --volt: #c8ff3d;
+    --volt-glow: rgba(200, 255, 61, 0.4);
+    --steel: #1a1c18;
+    --line: #2a2c24;
+    --glass: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  
+  html, body { 
+    height: 100%; 
+    background: var(--ink); 
+    font-family: 'Space Grotesk', sans-serif; 
+    color: var(--bone); 
+    overflow: hidden; 
+  }
+
+  #app { 
+    position: relative; 
+    width: 100%; 
+    height: 100vh; 
+    max-width: 480px; 
+    margin: 0 auto; 
+    overflow: hidden;
+    box-shadow: 0 0 100px rgba(0,0,0,0.5);
+  }
+
+  .screen { 
+    position: absolute; 
+    inset: 0; 
+    display: none; 
+    flex-direction: column; 
+    animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .screen.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(1.02); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  /* ============ UI COMPONENTS ============ */
+  .btn {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    padding: 20px;
+    border-radius: 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--glass-border);
+    text-transform: uppercase;
+  }
+  .btn:active { transform: scale(0.96); }
+  
+  .btn-primary {
+    background: var(--volt);
+    color: var(--ink);
+    border: none;
+    box-shadow: 0 0 20px var(--volt-glow);
+  }
+  
+  .btn-outline {
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    color: var(--bone);
+  }
+
+  /* ============ HOME SCREEN ============ */
+  #screen-home { 
+    padding: 40px 24px;
+    background: radial-gradient(circle at top right, #1a1c11, transparent),
+                radial-gradient(circle at bottom left, #0e1008, transparent);
+  }
+
+  .home-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 60px;
+  }
+
+  .xp-badge {
+    background: var(--glass);
+    padding: 8px 16px;
+    border-radius: 100px;
+    border: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .xp-badge .dot { width: 8px; height: 8px; background: var(--volt); border-radius: 50%; box-shadow: 0 0 8px var(--volt); }
+
+  .brand { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+  .brand h1 { 
+    font-family: 'Syncopate', sans-serif; 
+    font-size: 52px; 
+    line-height: 0.8; 
+    text-align: center;
+    letter-spacing: -0.05em;
+  }
+  .brand h1 span { color: var(--volt); text-shadow: 0 0 30px var(--volt-glow); }
+  .brand p { 
+    margin-top: 20px; 
+    font-size: 10px; 
+    letter-spacing: 0.4em; 
+    text-transform: uppercase; 
+    color: var(--volt);
+    opacity: 0.8;
+  }
+
+  .home-footer { margin-top: auto; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ============ LEVEL MAP ============ */
+  #screen-map { background: var(--ink); }
+  .map-header {
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: linear-gradient(to bottom, var(--ink), transparent);
+    z-index: 10;
+  }
+  .back-btn {
+    width: 44px; height: 44px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .map-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    position: relative;
+  }
+  .level-path-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 1000px;
+    pointer-events: none;
+    stroke: var(--line);
+    stroke-width: 4;
+    fill: none;
+    stroke-dasharray: 10 10;
+  }
+  .node {
+    position: absolute;
+    width: 64px; height: 64px;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 2;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+  }
+  .node.done { background: var(--volt); color: var(--ink); transform: rotate(5deg); }
+  .node.open { 
+    background: var(--ember); color: var(--bone); 
+    box-shadow: 0 0 25px var(--ember-glow);
+    animation: nodeFloat 2s ease-in-out infinite;
+  }
+  .node.locked { background: var(--steel); color: #444; cursor: not-allowed; border: 1px solid var(--line); }
+  .node.boss { width: 80px; height: 80px; background: linear-gradient(135deg, var(--ember), #ff0055); }
+
+  @keyframes nodeFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-8px) scale(1.05); }
+  }
+
+  /* ============ WORKOUT HUD ============ */
+  #screen-play { background: #000; }
+  .video-container { position: relative; width: 100%; height: 100%; }
+  video, canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+  
+  .hud-overlay {
+    position: absolute;
+    inset: 0;
+    padding: 30px 24px;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .timer-box {
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(10px);
+    padding: 12px 20px;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+  }
+  .timer-val { font-family: 'Archivo Black', sans-serif; font-size: 24px; color: var(--volt); }
+  .timer-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.2em; opacity: 0.6; }
+
+  .rep-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .rep-main {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 160px;
+    line-height: 0.8;
+    color: var(--bone);
+    text-shadow: 0 0 40px rgba(0,0,0,0.8);
+    position: relative;
+  }
+  .rep-target {
+    position: absolute;
+    bottom: -20px; right: -20px;
+    font-size: 24px;
+    color: var(--volt);
+  }
+
+  .progress-bar-wrap {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 100px;
+    margin-top: 40px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--ember), var(--volt));
+    box-shadow: 0 0 15px var(--volt-glow);
+    transition: width 0.3s ease;
+  }
+
+  .state-indicator {
+    margin-top: 20px;
+    padding: 8px 24px;
+    background: var(--glass);
+    backdrop-filter: blur(10px);
+    border-radius: 100px;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--volt);
+    border: 1px solid var(--volt-glow);
+  }
+
+  .hud-bottom { margin-top: auto; display: flex; justify-content: center; }
+  .quit-btn { 
+    pointer-events: auto;
+    padding: 12px 30px;
+    background: rgba(255,0,0,0.2);
+    border: 1px solid rgba(255,0,0,0.3);
+    border-radius: 100px;
+    color: #ff4444;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  /* ============ RESULT SCREEN ============ */
+  #screen-result {
+    padding: 40px;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #1a1c11, var(--ink));
+  }
+  .result-card {
+    width: 100%;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    padding: 40px 24px;
+    border-radius: 32px;
+    backdrop-filter: blur(20px);
+    text-align: center;
+  }
+  .result-status { font-family: 'Archivo Black', sans-serif; font-size: 40px; margin-bottom: 8px; }
+  .status-win { color: var(--volt); text-shadow: 0 0 20px var(--volt-glow); }
+  .status-fail { color: var(--ember); text-shadow: 0 0 20px var(--ember-glow); }
+  
+  .result-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 30px 0;
+  }
+  .stat-item {
+    background: rgba(255,255,255,0.05);
+    padding: 20px;
+    border-radius: 20px;
+  }
+  .stat-val { font-family: 'Archivo Black', sans-serif; font-size: 24px; display: block; }
+  .stat-lbl { font-size: 10px; text-transform: uppercase; opacity: 0.5; }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="screen-home">
+    <div class="home-top" id="homeTopbar">
+      <div class="xp-badge"><span class="dot"></span><span id="userXP">0</span> XP</div>
+      <div id="userProfile"></div>
+    </div>
+    
+    <div class="brand">
+      <p>EST. 2026</p>
+      <h1>PUMP<br><span>UP</span></h1>
+      <p>CAMERA COUNTS. YOU CLIMB.</p>
+    </div>
+
+    <div class="home-footer" id="homeStack">
+      <!-- Dynamic content from JS -->
+    </div>
+  </div>
+
+  <!-- LEVEL MAP -->
+  <div class="screen" id="screen-map">
+    <div class="map-header">
+      <div class="back-btn" onclick="goTo('home')">←</div>
+      <div style="font-family: 'Archivo Black'; font-size: 14px; letter-spacing: 0.2em;">CHAPTER 01</div>
+    </div>
+    <div class="map-scroll">
+      <svg class="level-path-svg" id="mapPathSvg"></svg>
+      <div id="levelPath"></div>
+    </div>
+  </div>
+
+  <!-- WORKOUT SCREEN -->
+  <div class="screen" id="screen-play">
+    <div class="video-container">
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="canvas"></canvas>
+      
+      <div class="hud-overlay">
+        <div class="hud-top">
+          <div class="timer-box">
+            <div class="timer-val" id="timerLabel">0:00</div>
+            <div class="timer-label">Time Remaining</div>
+          </div>
+          <div class="timer-box" style="text-align: right;">
+            <div class="timer-val" id="playLvlBadge" style="font-size: 16px;">LVL 1</div>
+            <div class="timer-label">Difficulty</div>
+          </div>
+        </div>
+
+        <div class="rep-center">
+          <div class="rep-main">
+            <span id="repCount">0</span>
+            <span class="rep-target" id="challengeTarget">/10</span>
+          </div>
+          <div class="state-indicator" id="stateTag">WAITING...</div>
+          
+          <div style="width: 100%;">
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill" id="challengeFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud-bottom">
+          <div class="quit-btn" onclick="quitLevel()">END WORKOUT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT SCREEN -->
+  <div class="screen" id="screen-result">
+    <div class="result-card">
+      <div class="result-status" id="resultTitle">LEVEL CLEAR</div>
+      <p id="resultSub" style="opacity: 0.6; font-size: 14px;">Incredible performance, athlete.</p>
+      
+      <div class="result-stats">
+        <div class="stat-item">
+          <span class="stat-val" id="finalReps">0</span>
+          <span class="stat-lbl">Total Reps</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-val" id="resultXp" style="color: var(--volt);">+0</span>
+          <span class="stat-lbl">XP Gained</span>
+        </div>
+      </div>
+
+      <div id="resultStack" style="display: flex; flex-direction: column; gap: 12px;">
+        <!-- Buttons from JS -->
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+  signInAnonymously, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDCevdh6hPMg4DqpwPlhbFyecGcSO5dITE",
+  authDomain: "pump-462fe.firebaseapp.com",
+  projectId: "pump-462fe",
+  storageBucket: "pump-462fe.firebasestorage.app",
+  messagingSenderId: "773870961352",
+  appId: "1:773870961352:web:7d17711e99926edec75bfd",
+  measurementId: "G-THH5SQEH2X"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+const provider = new GoogleAuthProvider();
+
+// ============ DATA ============
+const LEVELS = [
+  { id: 1, target: 5,  timeLimit: 60, xpReward: 10, pos: {x: 20, y: 50} },
+  { id: 2, target: 8,  timeLimit: 60, xpReward: 15, pos: {x: 60, y: 150} },
+  { id: 3, target: 10, timeLimit: 60, xpReward: 20, pos: {x: 30, y: 250} },
+  { id: 4, target: 12, timeLimit: 60, xpReward: 25, pos: {x: 70, y: 350} },
+  { id: 5, target: 15, timeLimit: 60, xpReward: 30, pos: {x: 40, y: 450} },
+  { id: 6, target: 18, timeLimit: 60, xpReward: 35, pos: {x: 20, y: 550} },
+  { id: 7, target: 20, timeLimit: 60, xpReward: 40, pos: {x: 60, y: 650} },
+  { id: 8, target: 22, timeLimit: 60, xpReward: 45, pos: {x: 30, y: 750} },
+  { id: 9, target: 25, timeLimit: 60, xpReward: 50, pos: {x: 70, y: 850} },
+  { id: "boss", target: 30, timeLimit: 90, xpReward: 100, pos: {x: 40, y: 950} },
+];
+
+// ============ STATE ============
+let currentUser = null;
+let progress = { totalXP: 0, levelsCompleted: [], currentUnlockedLevel: 1 };
+let activeLevel = null;
+let repCount = 0, pushupState = 'UP';
+let timeLeft = 0, timerInterval = null;
+let cameraStream = null;
+
+// ============ CORE LOGIC ============
+window.goTo = function(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'map') renderLevelMap();
+  if (name !== 'play') stopCamera();
+};
+
+async function loadProgress(uid){
+  const ref = doc(db, 'pumpup_users', uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    progress = snap.data();
+  } else {
+    progress = { totalXP: 0, levelsCompleted: [], currentUnlockedLevel: 1 };
+    await setDoc(ref, progress);
+  }
+  document.getElementById('userXP').textContent = progress.totalXP;
+}
+
+async function saveProgress(){
+  if (!currentUser) return;
+  const ref = doc(db, 'pumpup_users', currentUser.uid);
+  await setDoc(ref, progress);
+  document.getElementById('userXP').textContent = progress.totalXP;
+}
+
+// ============ RENDERERS ============
+function renderHome(){
+  const stack = document.getElementById('homeStack');
+  if (!currentUser) {
+    stack.innerHTML = `
+      <div class="btn btn-primary" id="googleBtn">SIGN IN WITH GOOGLE</div>
+      <div class="btn btn-outline" id="guestBtn">CONTINUE AS GUEST</div>
+      <p id="authError" style="text-align:center; font-size:12px; color:var(--ember); margin-top:10px;"></p>
+    `;
+    document.getElementById('googleBtn').onclick = () => signInWithPopup(auth, provider);
+    document.getElementById('guestBtn').onclick = () => signInAnonymously(auth);
+  } else {
+    stack.innerHTML = `
+      <div class="btn btn-primary" onclick="goTo('map')">START JOURNEY</div>
+      <div class="btn btn-outline" style="opacity:0.5; cursor:not-allowed;">MULTIPLAYER (SOON)</div>
+    `;
+    const profile = document.getElementById('userProfile');
+    profile.innerHTML = currentUser.isAnonymous ? 
+      `<div style="font-weight:700; font-size:12px; color:var(--volt);">GUEST_ATHLETE</div>` :
+      `<img src="${currentUser.photoURL}" style="width:36px; height:36px; border-radius:12px; border:1px solid var(--volt);">`;
+  }
+}
+
+function renderLevelMap(){
+  const pathEl = document.getElementById('levelPath');
+  const svgEl = document.getElementById('mapPathSvg');
+  pathEl.innerHTML = '';
+  svgEl.innerHTML = '';
+  
+  let points = "";
+  LEVELS.forEach((lvl, i) => {
+    const done = progress.levelsCompleted.includes(lvl.id);
+    const isNext = !done && (lvl.id === progress.currentUnlockedLevel || (lvl.id === 'boss' && progress.currentUnlockedLevel === 'boss'));
+    let cls = done ? 'done' : (isNext ? 'open' : 'locked');
+    
+    const node = document.createElement('div');
+    node.className = `node ${cls} ${lvl.id === 'boss' ? 'boss' : ''}`;
+    node.style.left = lvl.pos.x + '%';
+    node.style.top = lvl.pos.y + 'px';
+    node.textContent = lvl.id === 'boss' ? 'BOSS' : lvl.id;
+    
+    if (cls !== 'locked') node.onclick = () => startLevel(lvl);
+    pathEl.appendChild(node);
+    
+    // Build SVG Path
+    const x = (lvl.pos.x / 100) * pathEl.clientWidth + 32;
+    const y = lvl.pos.y + 32;
+    points += `${x},${y} `;
+  });
+
+  const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+  polyline.setAttribute("points", points);
+  svgEl.appendChild(polyline);
+}
+
+// ============ WORKOUT ============
+function startLevel(lvl){
+  activeLevel = lvl;
+  repCount = 0;
+  timeLeft = lvl.timeLimit;
+  document.getElementById('repCount').textContent = '0';
+  document.getElementById('challengeTarget').textContent = '/' + lvl.target;
+  document.getElementById('challengeFill').style.width = '0%';
+  document.getElementById('playLvlBadge').textContent = 'LVL ' + lvl.id;
+  
+  goTo('play');
+  startCamera();
+  
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    const m = Math.floor(timeLeft / 60);
+    const s = String(timeLeft % 60).padStart(2, '0');
+    document.getElementById('timerLabel').textContent = `${m}:${s}`;
+    if (timeLeft <= 0) finishLevel(false);
+  }, 1000);
+}
+
+async function finishLevel(won){
+  clearInterval(timerInterval);
+  stopCamera();
+  
+  const title = document.getElementById('resultTitle');
+  const xpDisp = document.getElementById('resultXp');
+  
+  if (won) {
+    const firstClear = !progress.levelsCompleted.includes(activeLevel.id);
+    if (firstClear) {
+      progress.levelsCompleted.push(activeLevel.id);
+      progress.totalXP += activeLevel.xpReward;
+      const idx = LEVELS.findIndex(l => l.id === activeLevel.id);
+      if (LEVELS[idx+1]) progress.currentUnlockedLevel = LEVELS[idx+1].id;
+      await saveProgress();
+    }
+    title.textContent = "LEVEL CLEAR";
+    title.className = "result-status status-win";
+    xpDisp.textContent = firstClear ? `+${activeLevel.xpReward}` : "CLEARED";
+  } else {
+    title.textContent = "TIME EXPIRED";
+    title.className = "result-status status-fail";
+    xpDisp.textContent = "+0";
+  }
+  
+  document.getElementById('finalReps').textContent = repCount;
+  document.getElementById('resultStack').innerHTML = `
+    <div class="btn btn-primary" onclick="window.location.reload()">RETRY</div>
+    <div class="btn btn-outline" onclick="goTo('map')">MAP VIEW</div>
+  `;
+  goTo('result');
+}
+
+// ============ POSE LOGIC ============
+const videoEl = document.getElementById('video');
+const canvasEl = document.getElementById('canvas');
+const ctx = canvasEl.getContext('2d');
+
+const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+
+pose.onResults((results) => {
+  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  if (results.poseLandmarks) {
+    // Basic drawing for feedback
+    const lm = results.poseLandmarks;
+    const leftAngle = calculateAngle(lm[11], lm[13], lm[15]);
+    const rightAngle = calculateAngle(lm[12], lm[14], lm[16]);
+    const avgAngle = (leftAngle + rightAngle) / 2;
+
+    if (avgAngle < 90 && pushupState === 'UP') {
+      pushupState = 'DOWN';
+      document.getElementById('stateTag').textContent = "GO UP!";
+      document.getElementById('stateTag').style.color = "var(--ember)";
+    } else if (avgAngle > 160 && pushupState === 'DOWN') {
+      pushupState = 'UP';
+      repCount++;
+      document.getElementById('repCount').textContent = repCount;
+      document.getElementById('challengeFill').style.width = (repCount/activeLevel.target)*100 + '%';
+      document.getElementById('stateTag').textContent = "PUSH DOWN";
+      document.getElementById('stateTag').style.color = "var(--volt)";
+      if (repCount >= activeLevel.target) finishLevel(true);
+    }
+  }
+});
+
+function calculateAngle(a, b, c) {
+  const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+  let angle = Math.abs(radians * 180.0 / Math.PI);
+  if (angle > 180.0) angle = 360 - angle;
+  return angle;
+}
+
+async function startCamera(){
+  cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+  videoEl.srcObject = cameraStream;
+  canvasEl.width = videoEl.clientWidth;
+  canvasEl.height = videoEl.clientHeight;
+  
+  const sendFrame = async () => {
+    if (cameraStream) {
+      await pose.send({ image: videoEl });
+      requestAnimationFrame(sendFrame);
+    }
+  };
+  sendFrame();
+}
+
+function stopCamera(){
+  if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
+  cameraStream = null;
+}
+
+// ============ AUTH ============
+onAuthStateChanged(auth, user => {
+  currentUser = user;
+  if (user) loadProgress(user.uid);
+  renderHome();
+});
+
+window.quitLevel = () => { clearInterval(timerInterval); stopCamera(); goTo('map'); };
+
+</script>
+</body>
+          </html>
