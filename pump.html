@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PUMP UP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;700&display=swap');
+  :root{
+    --ink:#0e0f0c; --bone:#f3efe4; --ember:#ff5a1f; --ember-dim:#7a2c10;
+    --volt:#c8ff3d; --steel:#3a3d34; --line:#2a2c24;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html, body{ height:100%; background:var(--ink); font-family:'Space Grotesk', sans-serif; color:var(--bone); overflow:hidden; }
+  #app{ position:relative; width:100%; height:100vh; max-width:480px; margin:0 auto; overflow:hidden; }
+
+  .screen{ position:absolute; inset:0; display:none; flex-direction:column; }
+  .screen.active{ display:flex; }
+
+  /* ============ HOME ============ */
+  #screen-home{ padding:24px 20px; background: repeating-linear-gradient(135deg, #17180f, #17180f 2px, #191a11 2px, #191a11 40px); }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; }
+  .coin{ display:flex; align-items:center; gap:6px; background:var(--steel); padding:6px 10px; border-radius:20px; font-size:12px; font-weight:700; }
+  .coin .dot{ width:14px; height:14px; border-radius:50%; background:var(--volt); }
+  .profile-chip{ display:flex; align-items:center; gap:8px; }
+  .avatar{ width:34px; height:34px; border-radius:50%; border:2px solid var(--volt); object-fit:cover; }
+  .profile-text{ display:flex; flex-direction:column; line-height:1.1; }
+  .profile-name{ font-size:12px; font-weight:700; }
+  .profile-rank{ font-size:10px; color:var(--volt); text-transform:uppercase; letter-spacing:.05em; }
+
+  .brand{ text-align:center; }
+  .brand h1{ font-family:'Archivo Black', sans-serif; font-size:38px; line-height:.95; letter-spacing:-.02em; }
+  .brand h1 span{ color:var(--ember); }
+  .brand p{ margin-top:10px; font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--steel); }
+
+  .home-center{ flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:34px; width:100%; }
+
+  .stack{ display:flex; flex-direction:column; gap:12px; width:100%; }
+  .btn{ font-family:'Archivo Black', sans-serif; font-size:16px; letter-spacing:.05em; padding:16px 18px; border-radius:14px; text-align:center; cursor:pointer; border:2px solid var(--line); transition:transform .12s ease; }
+  .btn:active{ transform:scale(.97); }
+  .btn.primary{ background:var(--ember); color:var(--ink); border-color:var(--ember); box-shadow:0 6px 0 var(--ember-dim); }
+  .btn.disabled{ background:transparent; color:var(--steel); border-color:var(--line); cursor:not-allowed; }
+  .google-btn{ display:flex; align-items:center; justify-content:center; gap:10px; background:var(--bone); color:#1a1a1a; font-weight:700; font-size:14px; padding:13px 18px; border-radius:14px; cursor:pointer; border:none; width:100%; }
+  .google-btn svg{ width:18px; height:18px; }
+  .guest-btn{ background:transparent; color:var(--steel); font-size:12px; text-align:center; text-decoration:underline; cursor:pointer; padding:6px; }
+  .signed-out-cta{ width:100%; text-align:center; display:flex; flex-direction:column; gap:14px; }
+  .signed-out-cta p{ font-size:11px; color:var(--steel); }
+
+  /* ============ LEVEL MAP ============ */
+  #screen-map{ padding:20px 18px; }
+  .map-topbar{ display:flex; justify-content:space-between; align-items:center; }
+  .back-btn{ font-size:20px; cursor:pointer; background:var(--steel); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .map-title{ font-family:'Archivo Black', sans-serif; font-size:12px; letter-spacing:.15em; color:var(--volt); }
+  .path{ position:relative; flex:1; margin-top:20px; }
+  .node{ position:absolute; width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:'Archivo Black', sans-serif; font-size:16px; cursor:pointer; border:2px solid var(--line); }
+  .node.done{ background:var(--volt); color:var(--ink); }
+  .node.open{ background:var(--ember); color:var(--ink); box-shadow:0 0 0 6px rgba(255,90,31,.18); }
+  .node.locked{ background:var(--steel); color:#6b6e60; cursor:not-allowed; }
+  .node.boss{ width:60px; height:60px; font-size:11px; background:linear-gradient(135deg,#ff5a1f,#c8ff3d); color:var(--ink); }
+  .n1{ top:6%; left:6%;} .n2{ top:2%; left:32%;} .n3{ top:11%; left:58%;}
+  .n4{ top:22%; left:70%;} .n5{ top:33%; left:50%;} .n6{ top:33%; left:20%;}
+  .n7{ top:24%; left:2%;} .n8{ top:44%; left:8%;} .n9{ top:55%; left:35%;}
+  .nboss{ top:64%; left:55%;}
+
+  /* ============ WORKOUT ============ */
+  #screen-play{ background:#000; }
+  .stage{ position:relative; width:100%; height:100%; overflow:hidden; }
+  video, canvas{ position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; transform:scaleX(-1); }
+  .scrim-top{ position:absolute; top:0; left:0; right:0; height:180px; background:linear-gradient(180deg, rgba(0,0,0,.65), transparent); z-index:4; pointer-events:none; }
+  .scrim-bottom{ position:absolute; bottom:0; left:0; right:0; height:160px; background:linear-gradient(0deg, rgba(0,0,0,.65), transparent); z-index:4; pointer-events:none; }
+  .hud{ position:absolute; inset:0; z-index:5; display:flex; flex-direction:column; padding:20px 18px; pointer-events:none; }
+  .hud-top{ display:flex; justify-content:space-between; align-items:center; }
+  .timer{ font-family:'Archivo Black', sans-serif; font-size:16px; background:rgba(0,0,0,.5); padding:7px 14px; border-radius:10px; }
+  .lvl-badge{ font-family:'Archivo Black', sans-serif; font-size:11px; letter-spacing:.08em; color:var(--ink); background:var(--volt); padding:7px 12px; border-radius:10px; }
+  .challenge-wrap{ margin-top:16px; display:flex; align-items:center; gap:10px; }
+  .challenge-label{ font-family:'Archivo Black', sans-serif; font-size:13px; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+  .challenge-track{ flex:1; height:12px; background:rgba(42,44,36,.75); border-radius:8px; overflow:hidden; }
+  .challenge-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--ember),var(--volt)); transition:width .2s ease; }
+  .hero{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .rep-number{ font-family:'Archivo Black', sans-serif; font-size:150px; line-height:.85; text-shadow:0 0 30px rgba(200,255,61,.5), 0 4px 20px rgba(0,0,0,.6); }
+  .rep-of{ font-size:14px; letter-spacing:.15em; margin-top:6px; color:#e4e2d8; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+  .state-pill{ margin-top:14px; font-family:'Archivo Black', sans-serif; font-size:11px; letter-spacing:.1em; background:rgba(0,0,0,.55); color:var(--ember); padding:6px 14px; border-radius:20px; }
+  .bottom-hud{ display:flex; justify-content:space-between; align-items:center; }
+  .quit{ font-size:12px; color:#e4e2d8; text-transform:uppercase; letter-spacing:.1em; pointer-events:auto; cursor:pointer; }
+
+  /* ============ RESULT ============ */
+  #screen-result{ align-items:center; justify-content:center; text-align:center; padding:30px; background: repeating-linear-gradient(135deg, #17180f, #17180f 2px, #191a11 2px, #191a11 40px); }
+  .result-title{ font-family:'Archivo Black', sans-serif; font-size:32px; }
+  .result-title.win{ color:var(--volt); }
+  .result-title.fail{ color:var(--ember); }
+  .result-sub{ margin-top:8px; font-size:13px; color:var(--steel); }
+  .result-xp{ margin-top:24px; font-family:'Archivo Black', sans-serif; font-size:20px; color:var(--volt); }
+  .result-stack{ margin-top:34px; display:flex; flex-direction:column; gap:12px; width:100%; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= HOME ================= -->
+  <div class="screen active" id="screen-home">
+    <div class="topbar" id="homeTopbar"></div>
+    <div class="home-center">
+      <div class="brand">
+        <h1>PUMP<br><span>UP</span></h1>
+        <p>Camera counts. You climb.</p>
+      </div>
+      <div class="stack" id="homeStack"></div>
+    </div>
+  </div>
+
+  <!-- ================= LEVEL MAP ================= -->
+  <div class="screen" id="screen-map">
+    <div class="map-topbar">
+      <div class="back-btn" onclick="goTo('home')">←</div>
+      <div class="map-title">CHAPTER 01</div>
+      <div style="width:32px"></div>
+    </div>
+    <div class="path" id="levelPath"></div>
+  </div>
+
+  <!-- ================= WORKOUT ================= -->
+  <div class="screen" id="screen-play">
+    <div class="stage">
+      <video id="video" playsinline autoplay muted></video>
+      <canvas id="canvas"></canvas>
+      <div class="scrim-top"></div>
+      <div class="scrim-bottom"></div>
+      <div class="hud">
+        <div class="hud-top">
+          <div class="timer" id="timerLabel">0:00</div>
+          <div class="lvl-badge" id="playLvlBadge">LEVEL 1</div>
+        </div>
+        <div class="challenge-wrap">
+          <span class="challenge-label" id="challengeLabel">0</span>
+          <div class="challenge-track"><div class="challenge-fill" id="challengeFill"></div></div>
+          <span class="challenge-label" id="challengeTarget">/ 10</span>
+        </div>
+        <div class="hero">
+          <div class="rep-number" id="repCount">0</div>
+          <div class="rep-of">REPS</div>
+          <div class="state-pill" id="stateTag">—</div>
+        </div>
+        <div class="bottom-hud">
+          <div></div>
+          <div class="quit" onclick="quitLevel()">QUIT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= RESULT ================= -->
+  <div class="screen" id="screen-result">
+    <div class="result-title" id="resultTitle">—</div>
+    <div class="result-sub" id="resultSub">—</div>
+    <div class="result-xp" id="resultXp"></div>
+    <div class="result-stack" id="resultStack"></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
+  signInAnonymously, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDCevdh6hPMg4DqpwPlhbFyecGcSO5dITE",
+  authDomain: "pump-462fe.firebaseapp.com",
+  projectId: "pump-462fe",
+  storageBucket: "pump-462fe.firebasestorage.app",
+  messagingSenderId: "773870961352",
+  appId: "1:773870961352:web:7d17711e99926edec75bfd",
+  measurementId: "G-THH5SQEH2X"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+const provider = new GoogleAuthProvider();
+
+// ============ LEVEL DATA ============
+const LEVELS = [
+  { id: 1, target: 5,  timeLimit: 60, xpReward: 10 },
+  { id: 2, target: 8,  timeLimit: 60, xpReward: 15 },
+  { id: 3, target: 10, timeLimit: 60, xpReward: 20 },
+  { id: 4, target: 12, timeLimit: 60, xpReward: 25 },
+  { id: 5, target: 15, timeLimit: 60, xpReward: 30 },
+  { id: 6, target: 18, timeLimit: 60, xpReward: 35 },
+  { id: 7, target: 20, timeLimit: 60, xpReward: 40 },
+  { id: 8, target: 22, timeLimit: 60, xpReward: 45 },
+  { id: 9, target: 25, timeLimit: 60, xpReward: 50 },
+  { id: "boss", target: 30, timeLimit: 90, xpReward: 100 },
+];
+const NODE_POS = ['n1','n2','n3','n4','n5','n6','n7','n8','n9','nboss'];
+
+function rankForXP(xp){
+  if (xp >= 300) return 'Elite';
+  if (xp >= 150) return 'Beast';
+  if (xp >= 50) return 'Grinder';
+  return 'Rookie';
+}
+
+// ============ STATE ============
+let currentUser = null;
+let progress = { totalXP: 0, levelsCompleted: [], currentUnlockedLevel: 1 };
+let activeLevel = null;
+let repCount = 0, pushupState = 'UP';
+let timeLeft = 0, timerInterval = null;
+let cameraStream = null;
+
+// ============ SCREEN ROUTER ============
+window.goTo = function(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  if (name === 'map') renderLevelMap();
+  if (name !== 'play') stopCamera();
+};
+
+// ============ FIRESTORE PROGRESS ============
+async function loadProgress(uid){
+  const ref = doc(db, 'pumpup_users', uid);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    progress = snap.data();
+  } else {
+    progress = { totalXP: 0, levelsCompleted: [], currentUnlockedLevel: 1 };
+    await setDoc(ref, progress);
+  }
+}
+async function saveProgress(){
+  if (!currentUser) return;
+  const ref = doc(db, 'pumpup_users', currentUser.uid);
+  await setDoc(ref, progress);
+}
+
+// ============ HOME SCREEN ============
+function renderHomeSignedOut(){
+  document.getElementById('homeTopbar').innerHTML = `<div class="coin"><span class="dot"></span>0</div><div></div>`;
+  document.getElementById('homeStack').innerHTML = `
+    <div class="signed-out-cta">
+      <p>Sign in to save your progress</p>
+      <button class="google-btn" id="googleSignInBtn">
+        <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 16 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4c-7.4 0-13.8 4.1-17.1 10.1z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.4C29.6 35.4 26.9 36 24 36c-5.3 0-9.7-3.4-11.3-8l-6.6 5.1C9.9 39.7 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.5l6.6 5.4C41.6 35.9 44 30.5 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>
+        Sign in with Google
+      </button>
+      <div class="guest-btn" id="guestSignInBtn">Continue as Guest</div>
+      <div id="authError" style="font-size:11px; color:var(--ember); min-height:14px;"></div>
+    </div>`;
+  const errEl = document.getElementById('authError');
+  document.getElementById('googleSignInBtn').addEventListener('click', () => {
+    errEl.textContent = 'Opening Google sign-in…';
+    signInWithPopup(auth, provider)
+      .catch(async (err) => {
+        console.error(err);
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
+          errEl.textContent = 'Popup blocked — trying redirect…';
+          try { await signInWithRedirect(auth, provider); }
+          catch (e2) { errEl.textContent = 'Error: ' + e2.code; }
+        } else {
+          errEl.textContent = 'Error: ' + err.code;
+        }
+      });
+  });
+  document.getElementById('guestSignInBtn').addEventListener('click', () => {
+    errEl.textContent = 'Signing in as guest…';
+    signInAnonymously(auth).catch(err => {
+      console.error(err);
+      errEl.textContent = 'Error: ' + err.code;
+    });
+  });
+}
+function renderHomeSignedIn(user){
+  const isGuest = user.isAnonymous;
+  document.getElementById('homeTopbar').innerHTML = `
+    <div class="coin"><span class="dot"></span>${progress.totalXP}</div>
+    <div class="profile-chip">
+      <div class="profile-text">
+        <span class="profile-name">${isGuest ? 'Guest' : (user.displayName || 'Player')}</span>
+        <span class="profile-rank">${rankForXP(progress.totalXP)}</span>
+      </div>
+      ${isGuest ? '' : `<img class="avatar" src="${user.photoURL || ''}" alt="avatar">`}
+    </div>`;
+  document.getElementById('homeStack').innerHTML = `
+    <div class="btn primary" onclick="goTo('map')">LEVELS</div>
+    <div class="btn disabled">NORMAL — Soon</div>
+    <div class="btn disabled">ONLINE — Soon</div>`;
+}
+
+// Catch the result when the browser returns from the Google redirect flow
+getRedirectResult(auth).catch(err => console.error('Redirect sign-in error:', err));
+
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  if (user) {
+    await loadProgress(user.uid);
+    renderHomeSignedIn(user);
+  } else {
+    progress = { totalXP: 0, levelsCompleted: [], currentUnlockedLevel: 1 };
+    renderHomeSignedOut();
+  }
+});
+
+// ============ LEVEL MAP ============
+function renderLevelMap(){
+  const pathEl = document.getElementById('levelPath');
+  pathEl.innerHTML = '';
+  LEVELS.forEach((lvl, i) => {
+    const done = progress.levelsCompleted.includes(lvl.id);
+    const isNext = !done && (lvl.id === progress.currentUnlockedLevel || (lvl.id === 'boss' && progress.currentUnlockedLevel === 'boss'));
+    let cls = 'locked';
+    if (done) cls = 'done';
+    else if (isNext) cls = 'open';
+    const isBoss = lvl.id === 'boss';
+    const node = document.createElement('div');
+    node.className = `node ${cls} ${isBoss ? 'boss' : ''} ${NODE_POS[i]}`;
+    node.textContent = isBoss ? 'BOSS' : lvl.id;
+    if (cls !== 'locked') {
+      node.addEventListener('click', () => startLevel(lvl));
+    }
+    pathEl.appendChild(node);
+  });
+}
+
+// ============ WORKOUT LOGIC ============
+function startLevel(lvl){
+  activeLevel = lvl;
+  repCount = 0;
+  pushupState = 'UP';
+  timeLeft = lvl.timeLimit;
+  document.getElementById('repCount').textContent = '0';
+  document.getElementById('challengeLabel').textContent = '0';
+  document.getElementById('challengeTarget').textContent = '/ ' + lvl.target;
+  document.getElementById('challengeFill').style.width = '0%';
+  document.getElementById('playLvlBadge').textContent = lvl.id === 'boss' ? 'BOSS' : ('LEVEL ' + lvl.id);
+  document.getElementById('timerLabel').textContent = formatTime(timeLeft);
+  goTo('play');
+  startCamera();
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    document.getElementById('timerLabel').textContent = formatTime(timeLeft);
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      finishLevel(repCount >= activeLevel.target);
+    }
+  }, 1000);
+}
+
+function formatTime(s){
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ':' + String(sec).padStart(2, '0');
+}
+
+function quitLevel(){
+  clearInterval(timerInterval);
+  stopCamera();
+  goTo('map');
+}
+
+async function finishLevel(won){
+  clearInterval(timerInterval);
+  stopCamera();
+  const titleEl = document.getElementById('resultTitle');
+  const subEl = document.getElementById('resultSub');
+  const xpEl = document.getElementById('resultXp');
+  const stackEl = document.getElementById('resultStack');
+
+  if (won) {
+    const firstClear = !progress.levelsCompleted.includes(activeLevel.id);
+    if (firstClear) {
+      progress.levelsCompleted.push(activeLevel.id);
+      progress.totalXP += activeLevel.xpReward;
+      const idx = LEVELS.findIndex(l => l.id === activeLevel.id);
+      const next = LEVELS[idx + 1];
+      if (next) progress.currentUnlockedLevel = next.id;
+      await saveProgress();
+    }
+    titleEl.textContent = 'LEVEL CLEAR';
+    titleEl.className = 'result-title win';
+    subEl.textContent = repCount + ' reps in ' + activeLevel.timeLimit + 's';
+    xpEl.textContent = firstClear ? ('+' + activeLevel.xpReward + ' XP') : 'Already cleared';
+  } else {
+    titleEl.textContent = 'TIME UP';
+    titleEl.className = 'result-title fail';
+    subEl.textContent = 'Got ' + repCount + ' / ' + activeLevel.target + ' — try again';
+    xpEl.textContent = '';
+  }
+
+  stackEl.innerHTML = `
+    <div class="btn primary" onclick="retryLevel()">RETRY</div>
+    <div class="btn disabled" style="color:var(--bone); border-color:var(--line);" onclick="goTo('map')">BACK TO MAP</div>`;
+  goTo('result');
+}
+
+window.retryLevel = function(){ startLevel(activeLevel); };
+window.quitLevel = quitLevel;
+
+// ============ POSE TRACKING + REP LOGIC ============
+const videoEl = document.getElementById('video');
+const canvasEl = document.getElementById('canvas');
+const ctx = canvasEl.getContext('2d');
+const repCountEl = document.getElementById('repCount');
+const stateTagEl = document.getElementById('stateTag');
+const challengeFillEl = document.getElementById('challengeFill');
+const challengeLabelEl = document.getElementById('challengeLabel');
+
+const DOWN_ANGLE_THRESHOLD = 90;
+const UP_ANGLE_THRESHOLD = 160;
+const L_SHOULDER = 11, L_ELBOW = 13, L_WRIST = 15;
+const R_SHOULDER = 12, R_ELBOW = 14, R_WRIST = 16;
+
+function angleBetween(a, b, c) {
+  const ab = { x: a.x - b.x, y: a.y - b.y, z: (a.z || 0) - (b.z || 0) };
+  const cb = { x: c.x - b.x, y: c.y - b.y, z: (c.z || 0) - (b.z || 0) };
+  const dot = ab.x * cb.x + ab.y * cb.y + ab.z * cb.z;
+  const magAB = Math.hypot(ab.x, ab.y, ab.z);
+  const magCB = Math.hypot(cb.x, cb.y, cb.z);
+  if (magAB === 0 || magCB === 0) return null;
+  const cos = Math.min(1, Math.max(-1, dot / (magAB * magCB)));
+  return (Math.acos(cos) * 180) / Math.PI;
+}
+
+function getElbowAngle(landmarks) {
+  const minVis = 0.5;
+  const leftOk = landmarks[L_SHOULDER].visibility > minVis && landmarks[L_ELBOW].visibility > minVis && landmarks[L_WRIST].visibility > minVis;
+  const rightOk = landmarks[R_SHOULDER].visibility > minVis && landmarks[R_ELBOW].visibility > minVis && landmarks[R_WRIST].visibility > minVis;
+  const leftAngle = leftOk ? angleBetween(landmarks[L_SHOULDER], landmarks[L_ELBOW], landmarks[L_WRIST]) : null;
+  const rightAngle = rightOk ? angleBetween(landmarks[R_SHOULDER], landmarks[R_ELBOW], landmarks[R_WRIST]) : null;
+  if (leftAngle !== null && rightAngle !== null) return (leftAngle + rightAngle) / 2;
+  if (leftAngle !== null) return leftAngle;
+  if (rightAngle !== null) return rightAngle;
+  return null;
+}
+
+function updateChallengeUI(){
+  const pct = Math.min(100, (repCount / activeLevel.target) * 100);
+  challengeFillEl.style.width = pct + '%';
+  challengeLabelEl.textContent = repCount;
+}
+
+function processRepLogic(landmarks) {
+  const angle = getElbowAngle(landmarks);
+  if (angle === null) { stateTagEl.textContent = 'ARMS N/A'; return; }
+
+  if (angle < DOWN_ANGLE_THRESHOLD && pushupState === 'UP') {
+    pushupState = 'DOWN';
+  } else if (angle > UP_ANGLE_THRESHOLD && pushupState === 'DOWN') {
+    pushupState = 'UP';
+    repCount++;
+    repCountEl.textContent = repCount;
+    updateChallengeUI();
+    if (repCount >= activeLevel.target) {
+      finishLevel(true);
+    }
+  }
+  stateTagEl.textContent = pushupState + ' ' + Math.round(angle) + '°';
+}
+
+function resizeCanvas(){ canvasEl.width = videoEl.clientWidth; canvasEl.height = videoEl.clientHeight; }
+window.addEventListener('resize', resizeCanvas);
+
+const pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.6, minTrackingConfidence: 0.6 });
+pose.onResults((results) => {
+  resizeCanvas();
+  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+  if (results.poseLandmarks) {
+    processRepLogic(results.poseLandmarks);
+  } else {
+    stateTagEl.textContent = 'GET IN FRAME';
+  }
+});
+
+let frameLoopActive = false;
+async function frameLoop(){
+  if (!frameLoopActive) return;
+  if (videoEl.readyState >= 2) await pose.send({ image: videoEl });
+  requestAnimationFrame(frameLoop);
+}
+
+async function startCamera(){
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    videoEl.srcObject = cameraStream;
+    await videoEl.play();
+    frameLoopActive = true;
+    requestAnimationFrame(frameLoop);
+  } catch (err) {
+    stateTagEl.textContent = 'CAMERA DENIED';
+    console.error(err);
+  }
+}
+function stopCamera(){
+  frameLoopActive = false;
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+}
+</script>
+
+</body>
+</html>
