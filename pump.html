@@ -668,10 +668,8 @@ function renderProfile(){
       </div>
     `).join('');
   }
-
-  document.getElementById('profileLogoutBtn').onclick = () => signOut(auth);
+document.getElementById('profileLogoutBtn').onclick = () => signOut(auth);
 }
-
 // ============ FIRESTORE PROGRESS ============
 async function loadProgress(uid){
   const ref = doc(db, 'pumpup_users', uid);
