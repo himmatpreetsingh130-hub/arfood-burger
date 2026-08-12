@@ -1115,7 +1115,7 @@ const EXERCISE_TRACKING = {
   squat: {
     leftTriplet: [L_HIP, L_KNEE, L_ANKLE],
     rightTriplet: [R_HIP, R_KNEE, R_ANKLE],
-    downThreshold: 100, upThreshold: 160,
+    downThreshold: 115, upThreshold: 150,
     tip: 'STAND BACK — FULL BODY IN FRAME'
   },
   situp: {
@@ -1137,7 +1137,7 @@ function angleBetween(a, b, c) {
 }
 
 function getJointAngleRaw(landmarks, config) {
-  const minVis = 0.4;
+  const minVis = 0.25;
   const [lA, lB, lC] = config.leftTriplet;
   const [rA, rB, rC] = config.rightTriplet;
   const leftVis = (landmarks[lA].visibility + landmarks[lB].visibility + landmarks[lC].visibility) / 3;
@@ -1247,7 +1247,10 @@ function updateDepthBar(angle){
 
 function processRepLogic(landmarks) {
   const angle = getElbowAngle(landmarks);
-  if (angle === null) { stateTagEl.textContent = 'ARMS N/A'; return; }
+  if (angle === null) {
+    stateTagEl.textContent = currentExercise === 'squat' ? 'LEGS N/A' : (currentExercise === 'situp' ? 'BODY N/A' : 'ARMS N/A');
+    return;
+  }
 
   if (!trackingReady) { return; } // let pose tracking settle before we start counting
 
@@ -1711,7 +1714,10 @@ battlePose.onResults((results) => {
 function processBattleRepLogic(landmarks){
   const cfg = EXERCISE_TRACKING[battleExercise];
   const rawAngle = cfg.metric === 'tilt' ? getTorsoTiltPseudoAngle(landmarks) : getJointAngleRaw(landmarks, cfg);
-  if (rawAngle === null) { battleStateTagEl.textContent = 'ARMS N/A'; return; }
+  if (rawAngle === null) {
+    battleStateTagEl.textContent = battleExercise === 'squat' ? 'LEGS N/A' : (battleExercise === 'situp' ? 'BODY N/A' : 'ARMS N/A');
+    return;
+  }
   const angle = smoothAngleWith(rawAngle, battleAngleBuffer);
   if (!battleTrackingReady) return;
 
