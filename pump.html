@@ -282,11 +282,147 @@
   .result-motivate-sub b{ color:var(--volt); }
 
   .result-stack{ position:relative; z-index:2; margin:30px 24px 24px; display:flex; flex-direction:column; gap:12px; }
+
+  /* ============ SQUAT TUTORIAL MODAL ============ */
+  .tutorial-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(7, 10, 18, 0.95);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    backdrop-filter: blur(8px);
+  }
+  .tutorial-overlay.active { display: flex; }
+  .tutorial-box {
+    background: #0f172a;
+    border: 2px solid var(--volt);
+    border-radius: 20px;
+    padding: 24px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 0 30px rgba(95, 240, 255, 0.3);
+    text-align: center;
+  }
+  .tutorial-title {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 18px;
+    color: var(--volt);
+    margin-bottom: 12px;
+    letter-spacing: .05em;
+  }
+  .tutorial-desc {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--bone);
+    margin-bottom: 20px;
+  }
+  .tutorial-desc b { color: var(--volt); }
+  .diagram-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .diagram-card {
+    flex: 1;
+    border-radius: 12px;
+    padding: 12px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .diagram-card.right {
+    background: rgba(61, 220, 106, 0.08);
+    border: 2px solid #3ddc6a;
+  }
+  .diagram-card.wrong {
+    background: rgba(231, 76, 60, 0.08);
+    border: 2px solid #e74c3c;
+  }
+  .diagram-label {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 11px;
+    margin-bottom: 8px;
+    letter-spacing: .05em;
+  }
+  .diagram-card.right .diagram-label { color: #3ddc6a; }
+  .diagram-card.wrong .diagram-label { color: #e74c3c; }
+  .diagram-art {
+    width: 80px;
+    height: 100px;
+    margin: 8px 0;
+  }
+  .diagram-badge {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 18px;
+    margin-top: 6px;
+  }
 </style>
 </head>
 <body>
 
 <div id="app">
+
+  <!-- ================= SQUAT TUTORIAL OVERLAY ================= -->
+  <div class="tutorial-overlay" id="squatTutorialOverlay">
+    <div class="tutorial-box">
+      <div class="tutorial-title">SQUAT POSITIONING</div>
+      <div class="tutorial-desc">
+        For perfect rep detection, <b>stand sideways (side-profile view)</b> to the camera. Front views cause detection drops.
+      </div>
+      <div class="diagram-container">
+        <div class="diagram-card right">
+          <div class="diagram-label">SIDE ANGLE</div>
+          <!-- Side profile SVG -->
+          <svg class="diagram-art" viewBox="0 0 100 120">
+            <!-- Ground -->
+            <line x1="10" y1="110" x2="90" y2="110" stroke="#3ddc6a" stroke-width="3" stroke-linecap="round" />
+            <!-- Person facing right in side profile -->
+            <circle cx="50" cy="25" r="10" fill="#e8f4ff" />
+            <!-- Neck -->
+            <line x1="50" y1="35" x2="50" y2="40" stroke="#e8f4ff" stroke-width="5" />
+            <!-- Torso -->
+            <line x1="50" y1="40" x2="50" y2="75" stroke="#e8f4ff" stroke-width="8" stroke-linecap="round" />
+            <!-- Legs (profile joint structure) -->
+            <!-- Hip to Knee -->
+            <line x1="50" y1="75" x2="50" y2="95" stroke="#e8f4ff" stroke-width="6" stroke-linecap="round" />
+            <!-- Knee to Ankle -->
+            <line x1="50" y1="95" x2="50" y2="110" stroke="#e8f4ff" stroke-width="6" stroke-linecap="round" />
+            <!-- Foot -->
+            <line x1="50" y1="110" x2="60" y2="110" stroke="#e8f4ff" stroke-width="6" stroke-linecap="round" />
+            <!-- Arm (profile) -->
+            <line x1="50" y1="42" x2="50" y2="70" stroke="#a3b8cc" stroke-width="4" stroke-linecap="round" />
+          </svg>
+          <div class="diagram-badge" style="color: #3ddc6a;">✓</div>
+        </div>
+        <div class="diagram-card wrong">
+          <div class="diagram-label">FRONT ANGLE</div>
+          <!-- Front profile SVG -->
+          <svg class="diagram-art" viewBox="0 0 100 120">
+            <!-- Ground -->
+            <line x1="10" y1="110" x2="90" y2="110" stroke="#e74c3c" stroke-width="3" stroke-linecap="round" />
+            <!-- Person facing front -->
+            <circle cx="50" cy="25" r="10" fill="#e8f4ff" />
+            <!-- Torso -->
+            <rect x="42" y="38" width="16" height="35" rx="4" fill="#e8f4ff" />
+            <!-- Legs (front view) -->
+            <line x1="45" y1="73" x2="45" y2="110" stroke="#e8f4ff" stroke-width="5" stroke-linecap="round" />
+            <line x1="55" y1="73" x2="55" y2="110" stroke="#e8f4ff" stroke-width="5" stroke-linecap="round" />
+            <!-- Arms (front view) -->
+            <line x1="38" y1="40" x2="32" y2="70" stroke="#a3b8cc" stroke-width="4" stroke-linecap="round" />
+            <line x1="62" y1="40" x2="68" y2="70" stroke="#a3b8cc" stroke-width="4" stroke-linecap="round" />
+          </svg>
+          <div class="diagram-badge" style="color: #e74c3c;">✗</div>
+        </div>
+      </div>
+      <div class="btn primary" id="closeTutorialBtn" style="font-size:14px; padding:12px; width:100%;">OK, I'M READY</div>
+    </div>
+  </div>
 
   <!-- ================= LOADING ================= -->
   <div class="screen active" id="screen-loading" style="align-items:center; justify-content:center; text-align:center; background: repeating-linear-gradient(135deg, #070a12, #070a12 2px, #0a1220 2px, #0a1220 40px);">
@@ -974,6 +1110,29 @@ function renderLevelMap(){
   }, 50);
 }
 
+function showSquatTutorialIfNeeded(exerciseId, onReady) {
+  if (exerciseId === 'squat') {
+    const overlay = document.getElementById('squatTutorialOverlay');
+    const closeBtn = document.getElementById('closeTutorialBtn');
+    overlay.classList.add('active');
+
+    // Voice prompt
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance("Squat mode. Please stand sideways to the camera.");
+      utter.rate = 1.2;
+      window.speechSynthesis.speak(utter);
+    }
+
+    closeBtn.onclick = () => {
+      overlay.classList.remove('active');
+      onReady();
+    };
+  } else {
+    onReady();
+  }
+}
+
 // ============ WORKOUT LOGIC ============
 function startLevel(lvl){
   activeLevel = lvl;
@@ -995,24 +1154,27 @@ function startLevel(lvl){
   document.getElementById('playLvlBadge').textContent = lvl.isBoss ? 'BOSS' : ('LEVEL ' + lvl.id);
   document.getElementById('timerLabel').textContent = formatTime(timeLeft);
   goTo('play');
-  startCamera();
-  setTimeout(() => {
-    if ('speechSynthesis' in window) {
-      const utter = new SpeechSynthesisUtterance("Let's go!");
-      utter.rate = 1.2;
-      window.speechSynthesis.speak(utter);
-    }
-  }, 1600);
-  clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    timeLeft--;
-    document.getElementById('timerLabel').textContent = formatTime(timeLeft);
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      const achieved = EXERCISES[currentExercise].type === 'hold' ? holdSeconds : repCount;
-      finishLevel(achieved >= activeLevel.target);
-    }
-  }, 1000);
+
+  showSquatTutorialIfNeeded(currentExercise, () => {
+    startCamera();
+    setTimeout(() => {
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance("Let's go!");
+        utter.rate = 1.2;
+        window.speechSynthesis.speak(utter);
+      }
+    }, 1600);
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      document.getElementById('timerLabel').textContent = formatTime(timeLeft);
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        const achieved = EXERCISES[currentExercise].type === 'hold' ? holdSeconds : repCount;
+        finishLevel(achieved >= activeLevel.target);
+      }
+    }, 1000);
+  });
 }
 
 function formatTime(s){
@@ -1537,22 +1699,25 @@ function enterBattle(matchId, initialData){
   document.getElementById('oppReps').textContent = '0';
 
   goTo('battle');
-  startBattleCamera();
-  battleStateTagEl.textContent = EXERCISE_TRACKING[battleExercise].tip;
-  setTimeout(() => {
-    let battleCountdown = 4;
-    battleStateTagEl.textContent = 'STARTING IN ' + battleCountdown;
-    const battleCountdownInterval = setInterval(() => {
-      battleCountdown--;
-      if (battleCountdown > 0) {
-        battleStateTagEl.textContent = 'STARTING IN ' + battleCountdown;
-      } else {
-        battleStateTagEl.textContent = 'GO!';
-        battleTrackingReady = true;
-        clearInterval(battleCountdownInterval);
-      }
-    }, 1000);
-  }, 1300);
+
+  showSquatTutorialIfNeeded(battleExercise, () => {
+    startBattleCamera();
+    battleStateTagEl.textContent = EXERCISE_TRACKING[battleExercise].tip;
+    setTimeout(() => {
+      let battleCountdown = 4;
+      battleStateTagEl.textContent = 'STARTING IN ' + battleCountdown;
+      const battleCountdownInterval = setInterval(() => {
+        battleCountdown--;
+        if (battleCountdown > 0) {
+          battleStateTagEl.textContent = 'STARTING IN ' + battleCountdown;
+        } else {
+          battleStateTagEl.textContent = 'GO!';
+          battleTrackingReady = true;
+          clearInterval(battleCountdownInterval);
+        }
+      }, 1000);
+    }, 1300);
+  });
 
   const matchRef = doc(db, 'matches', matchId);
   battleMatchUnsub = onSnapshot(matchRef, (snap) => {
