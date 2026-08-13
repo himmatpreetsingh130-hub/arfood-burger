@@ -1111,7 +1111,7 @@ function renderLevelMap(){
 }
 
 function showSquatTutorialIfNeeded(exerciseId, onReady) {
-  if (exerciseId === 'squat' || exerciseId === 'plank') {
+  if (exerciseId === 'squat' || exerciseId === 'plank' || exerciseId === 'situp') {
     const overlay = document.getElementById('squatTutorialOverlay');
     const closeBtn = document.getElementById('closeTutorialBtn');
     const titleEl = document.getElementById('tutorialTitle');
@@ -1150,7 +1150,7 @@ function showSquatTutorialIfNeeded(exerciseId, onReady) {
           <div class="diagram-badge" style="color: #e74c3c;">✗</div>
         </div>
       `;
-    } else {
+    } else if (exerciseId === 'plank') {
       titleEl.textContent = "PLANK POSITIONING";
       descEl.innerHTML = `For perfect plank tracking, <b>align sideways (side-profile)</b> and place your camera <b>low to the floor</b>. Front views cause tracking drops.`;
       diagramsEl.innerHTML = `
@@ -1178,6 +1178,33 @@ function showSquatTutorialIfNeeded(exerciseId, onReady) {
           <div class="diagram-badge" style="color: #e74c3c;">✗</div>
         </div>
       `;
+    } else {
+      titleEl.textContent = "SIT-UP POSITIONING";
+      descEl.innerHTML = `For perfect sit-up counting, <b>lie sideways (side-profile)</b> to the camera. Keep your knees bent and chest visible.`;
+      diagramsEl.innerHTML = `
+        <div class="diagram-card right">
+          <div class="diagram-label">SIDE ANGLE</div>
+          <svg class="diagram-art" viewBox="0 0 120 100" style="width:100px; height:100px;">
+            <line x1="10" y1="85" x2="110" y2="85" stroke="#3ddc6a" stroke-width="3" stroke-linecap="round" />
+            <circle cx="30" cy="72" r="8" fill="#e8f4ff" />
+            <line x1="38" y1="78" x2="68" y2="78" stroke="#e8f4ff" stroke-width="6" stroke-linecap="round" />
+            <polyline points="68,78 85,55 98,80" fill="none" stroke="#e8f4ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <div class="diagram-badge" style="color: #3ddc6a;">✓</div>
+        </div>
+        <div class="diagram-card wrong">
+          <div class="diagram-label">FRONT ANGLE</div>
+          <svg class="diagram-art" viewBox="0 0 120 100" style="width:100px; height:100px;">
+            <line x1="10" y1="85" x2="110" y2="85" stroke="#e74c3c" stroke-width="3" stroke-linecap="round" />
+            <circle cx="60" cy="35" r="8" fill="#e8f4ff" />
+            <rect x="52" y="45" width="16" height="28" rx="4" fill="#e8f4ff" />
+            <line x1="45" y1="50" x2="45" y2="75" stroke="#a3b8cc" stroke-width="4" stroke-linecap="round" />
+            <line x1="75" y1="50" x2="75" y2="75" stroke="#a3b8cc" stroke-width="4" stroke-linecap="round" />
+            <line x1="25" y1="20" x2="95" y2="80" stroke="#e74c3c" stroke-width="3" />
+          </svg>
+          <div class="diagram-badge" style="color: #e74c3c;">✗</div>
+        </div>
+      `;
     }
 
     overlay.classList.add('active');
@@ -1185,9 +1212,10 @@ function showSquatTutorialIfNeeded(exerciseId, onReady) {
     // Voice prompt
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const text = exerciseId === 'squat'
-        ? "Squat mode. Please stand sideways to the camera."
-        : "Forearm plank mode. Please align sideways and place your camera low to the floor.";
+      let text = "";
+      if (exerciseId === 'squat') text = "Squat mode. Please stand sideways to the camera.";
+      else if (exerciseId === 'plank') text = "Forearm plank mode. Please align sideways and place your camera low to the floor.";
+      else text = "Sit-up mode. Please lie sideways with your knees bent.";
       const utter = new SpeechSynthesisUtterance(text);
       utter.rate = 1.2;
       window.speechSynthesis.speak(utter);
@@ -1351,7 +1379,7 @@ const EXERCISE_TRACKING = {
   },
   situp: {
     metric: 'tilt', // torso angle from horizontal — knee position isn't reliable here since knees stay bent throughout
-    downThreshold: 120, upThreshold: 150,
+    downThreshold: 130, upThreshold: 145,
     tip: 'LIE DOWN, KNEES BENT'
   },
   plank: {
@@ -1400,7 +1428,7 @@ function getJointAngleRaw(landmarks, config) {
 // a clean range. Returned on the SAME scale/direction as joint angles (high
 // = resting/flat, low = curled up) so it plugs into the same threshold logic.
 function getTorsoTiltPseudoAngle(landmarks){
-  const minVis = 0.4;
+  const minVis = 0.25;
   const shoulders = [landmarks[L_SHOULDER], landmarks[R_SHOULDER]].filter(p => p.visibility > minVis);
   const hips = [landmarks[L_HIP], landmarks[R_HIP]].filter(p => p.visibility > minVis);
   if (!shoulders.length || !hips.length) return null;
