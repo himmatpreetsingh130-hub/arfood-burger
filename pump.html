@@ -1963,8 +1963,20 @@ let activeRoomPin = null;
 let privateRoomUnsub = null;
 let enteredPinDigits = [];
 
-window.openMatchModeModal = function(){
-  if (!currentUser) return;
+async function ensureUserAuthenticated(){
+  if (currentUser) return currentUser;
+  try {
+    const userCred = await signInAnonymously(auth);
+    currentUser = userCred.user;
+    return currentUser;
+  } catch (err) {
+    console.error('Auto sign-in failed:', err);
+    return null;
+  }
+}
+
+window.openMatchModeModal = async function(){
+  await ensureUserAuthenticated();
   document.getElementById('matchModeModal').style.display = 'flex';
 };
 
@@ -2042,8 +2054,12 @@ function generateRandomPin(){
 }
 
 async function hostPrivateRoom(){
-  if (!currentUser) return;
-  const myUid = currentUser.uid;
+  const user = await ensureUserAuthenticated();
+  if (!user) {
+    alert('Failed to authenticate user. Please try signing in again.');
+    return;
+  }
+  const myUid = user.uid;
   const myName = currentUser.isAnonymous ? 'Guest' : (currentUser.displayName || 'Player');
   const myExercise = currentExercise;
   const myDuration = selectedMatchDuration;
@@ -2080,8 +2096,12 @@ async function hostPrivateRoom(){
 }
 
 async function joinPrivateRoomByPin(pin){
-  if (!currentUser) return;
+  const user = await ensureUserAuthenticated();
   const errEl = document.getElementById('pinPadError');
+  if (!user) {
+    errEl.textContent = 'Authentication error. Please retry.';
+    return;
+  }
   errEl.textContent = 'Connecting...';
 
   const myUid = currentUser.uid;
@@ -2262,8 +2282,9 @@ window.leavePrivateLobby = async function(){
   goTo('duration');
 };
 
-window.startMatchmaking = function(){
-  if (!currentUser) return;
+window.startMatchmaking = async function(){
+  const user = await ensureUserAuthenticated();
+  if (!user) return;
   goTo('matchmaking');
   document.getElementById('cancelSearchBtn').onclick = cancelMatchmaking;
   const errEl = document.getElementById('mmError');
