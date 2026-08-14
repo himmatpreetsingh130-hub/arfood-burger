@@ -1766,6 +1766,7 @@ let battleTimerInterval = null;
 let battleStartTimeMs = 0, battleDuration = 60;
 let battleExercise = 'pushup';
 let battleFinished = false;
+let battleLastWriteSec = -1;
 
 window.startMatchmaking = function(){
   if (!currentUser) return;
@@ -1851,6 +1852,7 @@ function enterBattle(matchId, initialData){
   battleTrackingReady = false;
   battleLastRepTime = 0;
   battleFinished = false;
+  battleLastWriteSec = -1;
   battleStartTimeMs = initialData.startTime;
   battleDuration = initialData.duration;
   battleExercise = initialData.exercise || 'pushup';
@@ -2054,8 +2056,13 @@ function processBattleRepLogic(landmarks){
       battleLastRepTime = now;
       const secondsHeld = Math.floor(battleRepCount);
       myRepsEl.textContent = secondsHeld + 's';
-      const field = mySlot === 'player1' ? 'player1Reps' : 'player2Reps';
-      updateDoc(doc(db, 'matches', battleMatchId), { [field]: secondsHeld }).catch(console.error);
+
+      // Throttle Firestore writes: only write when a new full second is reached (1/sec instead of 24/sec!)
+      if (secondsHeld > battleLastWriteSec) {
+        battleLastWriteSec = secondsHeld;
+        const field = mySlot === 'player1' ? 'player1Reps' : 'player2Reps';
+        updateDoc(doc(db, 'matches', battleMatchId), { [field]: secondsHeld }).catch(console.error);
+      }
     } else {
       battleStateTagEl.textContent = 'KNEES TOUCHED / GET INTO PLANK';
       battleLastRepTime = 0; // Pause counting!
