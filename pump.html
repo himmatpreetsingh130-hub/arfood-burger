@@ -272,6 +272,97 @@
   .duration-time{ font-family:'Archivo Black', sans-serif; font-size:26px; color:var(--volt); }
   .duration-desc{ font-size:11px; color:var(--steel); margin-top:6px; }
 
+  /* ============ PRIVATE ROOM & PIN-PAD STYLES ============ */
+  .pin-modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(4, 8, 15, 0.88); backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+    animation: appleSlideIn 0.3s ease forwards;
+  }
+  .pin-modal-card {
+    background: linear-gradient(145deg, #0d1726, #070d18);
+    border: 2px solid var(--volt); border-radius: 24px;
+    padding: 24px 20px; width: 100%; max-width: 360px;
+    text-align: center; box-shadow: 0 0 35px rgba(95,240,255,0.25);
+  }
+  .pin-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .pin-modal-title { font-family: 'Archivo Black', sans-serif; font-size: 16px; letter-spacing: .06em; color: var(--volt); }
+  .pin-modal-close { font-size: 18px; color: var(--steel); cursor: pointer; padding: 4px 8px; }
+
+  .pin-display-wrap { display: flex; justify-content: center; gap: 10px; margin: 12px 0 6px; }
+  .pin-digit-box {
+    width: 44px; height: 52px; border-radius: 12px;
+    border: 2px solid var(--steel); background: #060b13;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Archivo Black', sans-serif; font-size: 24px; color: var(--volt);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
+    transition: all 0.2s ease;
+  }
+  .pin-digit-box.filled { border-color: var(--volt); box-shadow: 0 0 10px rgba(95,240,255,0.4); }
+  .pin-error-msg { font-size: 11px; color: var(--ember); min-height: 16px; margin: 4px 0 8px; }
+
+  .circular-pinpad-container {
+    position: relative; width: 250px; height: 250px; margin: 10px auto 16px;
+    border-radius: 50%; border: 1px dashed rgba(95, 240, 255, 0.25);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pinpad-center-hub {
+    position: absolute; width: 84px; height: 84px; border-radius: 50%;
+    background: #09121f; border: 2px solid var(--volt);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 0 20px rgba(95, 240, 255, 0.25);
+  }
+  .pin-hub-icon { font-size: 24px; }
+  .pin-dial-btn {
+    position: absolute; top: 50%; left: 50%;
+    width: 42px; height: 42px; margin: -21px; border-radius: 50%;
+    background: #0f1c2e; border: 2px solid var(--line); color: var(--bone);
+    font-family: 'Archivo Black', sans-serif; font-size: 15px; cursor: pointer;
+    transition: all 0.15s ease;
+    transform: rotate(var(--angle)) translate(96px) rotate(calc(-1 * var(--angle)));
+  }
+  .pin-dial-btn:hover, .pin-dial-btn:active {
+    background: var(--volt); color: var(--ink); border-color: var(--volt);
+    box-shadow: 0 0 14px rgba(95, 240, 255, 0.7); transform: rotate(var(--angle)) translate(96px) rotate(calc(-1 * var(--angle))) scale(1.1);
+  }
+
+  .pin-action-row { display: flex; justify-content: space-around; gap: 8px; margin-top: 10px; }
+  .btn-sm {
+    padding: 10px 14px; border-radius: 12px; border: 1px solid var(--steel);
+    font-family: 'Archivo Black', sans-serif; font-size: 12px; color: var(--bone);
+    cursor: pointer; background: #0a1322; flex: 1; text-align: center;
+    transition: all 0.2s ease;
+  }
+  .btn-sm:hover { border-color: var(--volt); color: var(--volt); }
+  .btn-sm.primary-sm { background: var(--volt); color: var(--ink); border-color: var(--volt); }
+
+  /* Lobby UI */
+  .lobby-pin-card {
+    background: #0a1322; border: 2px solid var(--volt); border-radius: 20px;
+    padding: 18px; text-align: center; margin: 16px 0;
+    box-shadow: 0 0 25px rgba(95, 240, 255, 0.15);
+  }
+  .lobby-pin-label { font-size: 10px; letter-spacing: 0.15em; color: var(--steel); text-transform: uppercase; }
+  .lobby-pin-value { font-family: 'Archivo Black', sans-serif; font-size: 38px; letter-spacing: 0.12em; color: var(--volt); margin: 4px 0 8px; }
+  .lobby-pin-copy {
+    display: inline-block; font-size: 11px; letter-spacing: .08em; font-family: 'Archivo Black', sans-serif;
+    color: var(--ink); background: var(--volt); padding: 6px 16px; border-radius: 14px; cursor: pointer;
+  }
+  .lobby-settings-bar { font-size: 12px; color: var(--steel); text-align: center; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 20px; }
+
+  .lobby-players-grid { display: flex; flex-direction: column; gap: 14px; }
+  .lobby-player-card {
+    background: #09111c; border: 2px solid var(--line); border-radius: 16px;
+    padding: 16px 18px; position: relative; display: flex; align-items: center; justify-content: space-between;
+  }
+  .lobby-player-card.connected { border-color: var(--volt); }
+  .lobby-role-badge { font-family: 'Archivo Black', sans-serif; font-size: 10px; color: var(--ink); background: var(--volt); padding: 3px 8px; border-radius: 8px; }
+  .lobby-player-name { font-family: 'Archivo Black', sans-serif; font-size: 16px; color: var(--bone); flex: 1; margin: 0 12px; }
+  .lobby-status-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; padding: 5px 10px; border-radius: 10px; background: var(--steel); color: var(--bone); }
+  .lobby-status-tag.ready { background: var(--volt); color: var(--ink); }
+  .lobby-status-tag.waiting { background: #1a2536; color: var(--steel); animation: heroPulse 1.5s infinite; }
+  .lobby-msg-banner { text-align: center; font-size: 12px; color: var(--steel); margin-top: 16px; min-height: 18px; }
+
   .exercise-grid{ display:flex; flex-direction:column; gap:14px; margin-top:20px; }
   .exercise-card{
     display:flex; align-items:center; gap:14px; border:2px solid var(--line); border-radius:16px; padding:16px 18px; cursor:pointer;
@@ -574,7 +665,106 @@
         <div class="duration-desc">Ultimate test. Total body burn.</div>
       </div>
     </div>
-    <div class="btn primary" style="margin-top:24px;" onclick="startMatchmaking()">START MATCH</div>
+    <div class="btn primary" style="margin-top:24px;" onclick="openMatchModeModal()">START BATTLE</div>
+  </div>
+
+  <!-- ================= MATCH MODE SELECTION MODAL ================= -->
+  <div class="pin-modal-overlay" id="matchModeModal" style="display:none;">
+    <div class="pin-modal-card">
+      <div class="pin-modal-header">
+        <div class="pin-modal-title">SELECT MATCH MODE</div>
+        <div class="pin-modal-close" onclick="closeMatchModeModal()">✕</div>
+      </div>
+      <div style="font-size:12px; color:var(--steel); margin-bottom:20px;">Choose how you want to challenge your rival</div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div class="btn-pill" style="font-size:15px; padding:15px;" onclick="selectMatchMode('public')">🌐 PUBLIC MATCHMAKING</div>
+        <div class="btn-pill btn-pill-yellow" style="font-size:15px; padding:15px;" onclick="selectMatchMode('host_private')">👑 HOST PRIVATE ROOM</div>
+        <div class="btn-pill" style="font-size:15px; padding:15px; background:linear-gradient(180deg,#e4e2d8,#8c92a4); color:#070d18; border-color:#8c92a4;" onclick="selectMatchMode('join_private')">🔐 JOIN PRIVATE ROOM</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CIRCULAR PIN-PAD MODAL ================= -->
+  <div class="pin-modal-overlay" id="pinPadModal" style="display:none;">
+    <div class="pin-modal-card">
+      <div class="pin-modal-header">
+        <div class="pin-modal-title" id="pinPadTitle">ENTER ROOM PIN</div>
+        <div class="pin-modal-close" onclick="closePinPadModal()">✕</div>
+      </div>
+      <div style="font-size:11px; color:var(--steel);" id="pinPadSub">Use dial pad to enter 4-digit PIN</div>
+
+      <div class="pin-display-wrap">
+        <div class="pin-digit-box" id="pinBox0">•</div>
+        <div class="pin-digit-box" id="pinBox1">•</div>
+        <div class="pin-digit-box" id="pinBox2">•</div>
+        <div class="pin-digit-box" id="pinBox3">•</div>
+      </div>
+      <div class="pin-error-msg" id="pinPadError"></div>
+
+      <div class="circular-pinpad-container">
+        <div class="pinpad-center-hub">
+          <span class="pin-hub-icon">🛡️</span>
+          <span style="font-size:9px; font-weight:700; color:var(--steel); letter-spacing:.05em; margin-top:2px;">KEYPAD</span>
+        </div>
+        <!-- Circular 0-9 Buttons (placed via CSS custom property --angle) -->
+        <button class="pin-dial-btn" style="--angle: -90deg" onclick="pressPinDigit('1')">1</button>
+        <button class="pin-dial-btn" style="--angle: -54deg" onclick="pressPinDigit('2')">2</button>
+        <button class="pin-dial-btn" style="--angle: -18deg" onclick="pressPinDigit('3')">3</button>
+        <button class="pin-dial-btn" style="--angle: 18deg" onclick="pressPinDigit('4')">4</button>
+        <button class="pin-dial-btn" style="--angle: 54deg" onclick="pressPinDigit('5')">5</button>
+        <button class="pin-dial-btn" style="--angle: 90deg" onclick="pressPinDigit('6')">6</button>
+        <button class="pin-dial-btn" style="--angle: 126deg" onclick="pressPinDigit('7')">7</button>
+        <button class="pin-dial-btn" style="--angle: 162deg" onclick="pressPinDigit('8')">8</button>
+        <button class="pin-dial-btn" style="--angle: 198deg" onclick="pressPinDigit('9')">9</button>
+        <button class="pin-dial-btn" style="--angle: 234deg" onclick="pressPinDigit('0')">0</button>
+      </div>
+
+      <div class="pin-action-row">
+        <button class="btn-sm" onclick="clearPinPad()">CLEAR</button>
+        <button class="btn-sm" onclick="backspacePinPad()">⌫ DEL</button>
+        <button class="btn-sm primary-sm" onclick="submitPinPad()">JOIN</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRIVATE ROOM LOBBY ================= -->
+  <div class="screen" id="screen-lobby" style="padding:24px 20px;">
+    <div class="map-topbar">
+      <div class="back-btn" onclick="leavePrivateLobby()">←</div>
+      <div class="map-title">PRIVATE LOBBY</div>
+      <div style="width:32px"></div>
+    </div>
+
+    <div class="lobby-pin-card">
+      <div class="lobby-pin-label">ROOM PIN</div>
+      <div class="lobby-pin-value" id="lobbyPinDisplay">----</div>
+      <div class="lobby-pin-copy" onclick="copyRoomPin()">📋 COPY PIN</div>
+    </div>
+
+    <div class="lobby-settings-bar" id="lobbySettingsBar">EXERCISE: PUSHUP • DURATION: 60S</div>
+
+    <div class="lobby-players-grid">
+      <!-- HOST SLOT -->
+      <div class="lobby-player-card connected" id="hostSlotCard">
+        <span class="lobby-role-badge">HOST</span>
+        <span class="lobby-player-name" id="hostPlayerName">Connecting...</span>
+        <span class="lobby-status-tag ready">READY</span>
+      </div>
+
+      <!-- GUEST SLOT -->
+      <div class="lobby-player-card" id="guestSlotCard">
+        <span class="lobby-role-badge" style="background:var(--steel); color:var(--bone);">GUEST</span>
+        <span class="lobby-player-name" id="guestPlayerName" style="color:var(--steel);">Waiting for player...</span>
+        <span class="lobby-status-tag waiting" id="guestStatusTag">WAITING</span>
+      </div>
+    </div>
+
+    <div class="lobby-msg-banner" id="lobbyMsgBanner">Share the PIN with your friend to start!</div>
+
+    <div style="margin-top:auto; padding-top:20px; display:flex; flex-direction:column; gap:12px;">
+      <div class="btn primary" id="lobbyStartBtn" style="display:none;" onclick="hostStartPrivateBattle()">START BATTLE</div>
+      <div class="btn outline-gold" style="border-color:var(--steel); color:var(--bone);" onclick="leavePrivateLobby()">LEAVE LOBBY</div>
+    </div>
   </div>
 
   <!-- ================= MATCHMAKING ================= -->
@@ -1767,6 +1957,310 @@ let battleStartTimeMs = 0, battleDuration = 60;
 let battleExercise = 'pushup';
 let battleFinished = false;
 let battleLastWriteSec = -1;
+
+// ============ PRIVATE ROOM MATCHMAKING SYSTEM ============
+let activeRoomPin = null;
+let privateRoomUnsub = null;
+let enteredPinDigits = [];
+
+window.openMatchModeModal = function(){
+  if (!currentUser) return;
+  document.getElementById('matchModeModal').style.display = 'flex';
+};
+
+window.closeMatchModeModal = function(){
+  document.getElementById('matchModeModal').style.display = 'none';
+};
+
+window.selectMatchMode = function(mode){
+  closeMatchModeModal();
+  if (mode === 'public') {
+    startMatchmaking();
+  } else if (mode === 'host_private') {
+    hostPrivateRoom();
+  } else if (mode === 'join_private') {
+    openPinPadModal();
+  }
+};
+
+window.openPinPadModal = function(){
+  enteredPinDigits = [];
+  updatePinPadDisplay();
+  document.getElementById('pinPadError').textContent = '';
+  document.getElementById('pinPadModal').style.display = 'flex';
+};
+
+window.closePinPadModal = function(){
+  document.getElementById('pinPadModal').style.display = 'none';
+};
+
+window.pressPinDigit = function(digit){
+  if (enteredPinDigits.length < 4) {
+    enteredPinDigits.push(digit);
+    updatePinPadDisplay();
+    document.getElementById('pinPadError').textContent = '';
+  }
+};
+
+window.clearPinPad = function(){
+  enteredPinDigits = [];
+  updatePinPadDisplay();
+  document.getElementById('pinPadError').textContent = '';
+};
+
+window.backspacePinPad = function(){
+  enteredPinDigits.pop();
+  updatePinPadDisplay();
+  document.getElementById('pinPadError').textContent = '';
+};
+
+function updatePinPadDisplay(){
+  for (let i = 0; i < 4; i++) {
+    const box = document.getElementById('pinBox' + i);
+    if (i < enteredPinDigits.length) {
+      box.textContent = enteredPinDigits[i];
+      box.classList.add('filled');
+    } else {
+      box.textContent = '•';
+      box.classList.remove('filled');
+    }
+  }
+}
+
+window.submitPinPad = function(){
+  if (enteredPinDigits.length < 4) {
+    document.getElementById('pinPadError').textContent = 'Please enter full 4-digit PIN';
+    return;
+  }
+  const pin = enteredPinDigits.join('');
+  joinPrivateRoomByPin(pin);
+};
+
+// Generate 4-digit numeric PIN
+function generateRandomPin(){
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+async function hostPrivateRoom(){
+  if (!currentUser) return;
+  const myUid = currentUser.uid;
+  const myName = currentUser.isAnonymous ? 'Guest' : (currentUser.displayName || 'Player');
+  const myExercise = currentExercise;
+  const myDuration = selectedMatchDuration;
+
+  let pin = generateRandomPin();
+  let roomRef = doc(db, 'private_rooms', pin);
+  let attempts = 0;
+  while ((await getDoc(roomRef)).exists() && attempts < 5) {
+    pin = generateRandomPin();
+    roomRef = doc(db, 'private_rooms', pin);
+    attempts++;
+  }
+
+  activeRoomPin = pin;
+  const roomData = {
+    pin: pin,
+    exercise: myExercise,
+    duration: myDuration,
+    status: 'waiting', // waiting, ready, active
+    host: { uid: myUid, displayName: myName, ready: true },
+    guest: null,
+    matchId: null,
+    createdAt: Date.now()
+  };
+
+  try {
+    await setDoc(roomRef, roomData);
+    setupPrivateRoomLobbyListener(pin, 'host');
+    goTo('lobby');
+  } catch (err) {
+    console.error('Error creating private room:', err);
+    alert('Failed to create private room: ' + err.message);
+  }
+}
+
+async function joinPrivateRoomByPin(pin){
+  if (!currentUser) return;
+  const errEl = document.getElementById('pinPadError');
+  errEl.textContent = 'Connecting...';
+
+  const myUid = currentUser.uid;
+  const myName = currentUser.isAnonymous ? 'Guest' : (currentUser.displayName || 'Player');
+
+  try {
+    const roomRef = doc(db, 'private_rooms', pin);
+    const snap = await getDoc(roomRef);
+
+    if (!snap.exists()) {
+      errEl.textContent = 'Room not found. Check PIN.';
+      return;
+    }
+
+    const roomData = snap.data();
+    if (roomData.status !== 'waiting' && roomData.status !== 'ready') {
+      errEl.textContent = 'Room is already full or battle started.';
+      return;
+    }
+
+    if (roomData.host.uid === myUid) {
+      // Host rejoining own room
+      activeRoomPin = pin;
+      closePinPadModal();
+      setupPrivateRoomLobbyListener(pin, 'host');
+      goTo('lobby');
+      return;
+    }
+
+    // Join as Guest
+    activeRoomPin = pin;
+    await updateDoc(roomRef, {
+      guest: { uid: myUid, displayName: myName, ready: true },
+      status: 'ready'
+    });
+
+    closePinPadModal();
+    setupPrivateRoomLobbyListener(pin, 'guest');
+    goTo('lobby');
+  } catch (err) {
+    console.error('Error joining room:', err);
+    errEl.textContent = 'Error: ' + (err.code || err.message);
+  }
+}
+
+function setupPrivateRoomLobbyListener(pin, role){
+  if (privateRoomUnsub) privateRoomUnsub();
+
+  const roomRef = doc(db, 'private_rooms', pin);
+  privateRoomUnsub = onSnapshot(roomRef, (snap) => {
+    if (!snap.exists()) {
+      alert('Room was closed.');
+      leavePrivateLobby();
+      return;
+    }
+
+    const room = snap.data();
+    const exName = (EXERCISES[room.exercise] ? EXERCISES[room.exercise].name : room.exercise).toUpperCase();
+    document.getElementById('lobbyPinDisplay').textContent = room.pin;
+    document.getElementById('lobbySettingsBar').textContent = `EXERCISE: ${exName} • DURATION: ${room.duration}S`;
+
+    // Host UI
+    document.getElementById('hostPlayerName').textContent = room.host ? room.host.displayName : 'Unknown';
+
+    // Guest UI
+    const guestCard = document.getElementById('guestSlotCard');
+    const guestNameEl = document.getElementById('guestPlayerName');
+    const guestTag = document.getElementById('guestStatusTag');
+    const startBtn = document.getElementById('lobbyStartBtn');
+    const msgBanner = document.getElementById('lobbyMsgBanner');
+
+    if (room.guest) {
+      guestCard.classList.add('connected');
+      guestNameEl.textContent = room.guest.displayName;
+      guestNameEl.style.color = 'var(--bone)';
+      guestTag.textContent = 'READY';
+      guestTag.className = 'lobby-status-tag ready';
+
+      if (role === 'host') {
+        startBtn.style.display = 'block';
+        msgBanner.textContent = 'Rival joined! Click START BATTLE when ready.';
+      } else {
+        startBtn.style.display = 'none';
+        msgBanner.textContent = 'Connected! Waiting for host to launch battle...';
+      }
+    } else {
+      guestCard.classList.remove('connected');
+      guestNameEl.textContent = 'Waiting for player...';
+      guestNameEl.style.color = 'var(--steel)';
+      guestTag.textContent = 'WAITING';
+      guestTag.className = 'lobby-status-tag waiting';
+      startBtn.style.display = 'none';
+      msgBanner.textContent = 'Share PIN ' + room.pin + ' with your rival!';
+    }
+
+    // Check if match started
+    if (room.status === 'active' && room.matchId) {
+      listenForPrivateMatch(room.matchId);
+    }
+  }, (err) => {
+    console.error('Private room lobby sync error:', err);
+  });
+}
+
+window.copyRoomPin = function(){
+  if (!activeRoomPin) return;
+  navigator.clipboard.writeText(activeRoomPin).then(() => {
+    const banner = document.getElementById('lobbyMsgBanner');
+    const orig = banner.textContent;
+    banner.textContent = 'PIN Copied to Clipboard! 📋';
+    setTimeout(() => { banner.textContent = orig; }, 2000);
+  }).catch(() => {
+    alert('PIN: ' + activeRoomPin);
+  });
+};
+
+window.hostStartPrivateBattle = async function(){
+  if (!activeRoomPin || !currentUser) return;
+  const roomRef = doc(db, 'private_rooms', activeRoomPin);
+  const snap = await getDoc(roomRef);
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (!room.guest) return;
+
+  const matchId = `private_${activeRoomPin}_${Date.now()}`;
+  const matchRef = doc(db, 'matches', matchId);
+
+  try {
+    await setDoc(matchRef, {
+      players: [room.host.uid, room.guest.uid],
+      player1: { uid: room.host.uid, displayName: room.host.displayName },
+      player2: { uid: room.guest.uid, displayName: room.guest.displayName },
+      player1Reps: 0, player2Reps: 0,
+      startTime: Date.now() + 1500, // short delay buffer
+      duration: room.duration,
+      exercise: room.exercise,
+      status: 'active',
+      winner: null
+    });
+
+    await updateDoc(roomRef, {
+      status: 'active',
+      matchId: matchId
+    });
+  } catch (err) {
+    console.error('Failed to launch private battle:', err);
+    alert('Error launching battle: ' + err.message);
+  }
+};
+
+function listenForPrivateMatch(matchId){
+  if (battleMatchId) return;
+  const myUid = currentUser.uid;
+  const matchRef = doc(db, 'matches', matchId);
+  getDoc(matchRef).then((snap) => {
+    if (snap.exists()) {
+      if (privateRoomUnsub) privateRoomUnsub();
+      handleMatchFound(matchId, snap.data(), myUid);
+    }
+  });
+}
+
+window.leavePrivateLobby = async function(){
+  if (privateRoomUnsub) privateRoomUnsub();
+  if (activeRoomPin && currentUser) {
+    const roomRef = doc(db, 'private_rooms', activeRoomPin);
+    const snap = await getDoc(roomRef).catch(() => null);
+    if (snap && snap.exists()) {
+      const d = snap.data();
+      if (d.host.uid === currentUser.uid) {
+        deleteDoc(roomRef).catch(() => {});
+      } else if (d.guest && d.guest.uid === currentUser.uid) {
+        updateDoc(roomRef, { guest: null, status: 'waiting' }).catch(() => {});
+      }
+    }
+  }
+  activeRoomPin = null;
+  goTo('duration');
+};
 
 window.startMatchmaking = function(){
   if (!currentUser) return;
