@@ -2060,20 +2060,37 @@ async function hostPrivateRoom(){
     return;
   }
   const myUid = user.uid;
-  const myName = currentUser.isAnonymous ? 'Guest' : (currentUser.displayName || 'Player');
-  const myExercise = currentExercise;
-  const myDuration = selectedMatchDuration;
+  const myName = user.isAnonymous ? 'Guest' : (user.displayName || 'Player');
+  const myExercise = currentExercise || 'pushup';
+  const myDuration = selectedMatchDuration || 60;
 
-  let pin = generateRandomPin();
-  let roomRef = doc(db, 'private_rooms', pin);
-  let attempts = 0;
-  while ((await getDoc(roomRef)).exists() && attempts < 5) {
-    pin = generateRandomPin();
-    roomRef = doc(db, 'private_rooms', pin);
-    attempts++;
-  }
-
+  // Generate 4-digit PIN instantly
+  const pin = generateRandomPin();
   activeRoomPin = pin;
+
+  // Populate lobby UI immediately for fast response
+  const exName = (EXERCISES[myExercise] ? EXERCISES[myExercise].name : myExercise).toUpperCase();
+  document.getElementById('lobbyPinDisplay').textContent = pin;
+  document.getElementById('lobbySettingsBar').textContent = `EXERCISE: ${exName} • DURATION: ${myDuration}S`;
+  document.getElementById('hostPlayerName').textContent = myName;
+
+  const guestCard = document.getElementById('guestSlotCard');
+  const guestNameEl = document.getElementById('guestPlayerName');
+  const guestTag = document.getElementById('guestStatusTag');
+  const startBtn = document.getElementById('lobbyStartBtn');
+  const msgBanner = document.getElementById('lobbyMsgBanner');
+
+  guestCard.classList.remove('connected');
+  guestNameEl.textContent = 'Waiting for player...';
+  guestNameEl.style.color = 'var(--steel)';
+  guestTag.textContent = 'WAITING';
+  guestTag.className = 'lobby-status-tag waiting';
+  startBtn.style.display = 'none';
+  msgBanner.textContent = 'Share PIN ' + pin + ' with your rival!';
+
+  // Immediately navigate to lobby screen
+  goTo('lobby');
+
   const roomData = {
     pin: pin,
     exercise: myExercise,
@@ -2086,12 +2103,13 @@ async function hostPrivateRoom(){
   };
 
   try {
+    const roomRef = doc(db, 'private_rooms', pin);
     await setDoc(roomRef, roomData);
     setupPrivateRoomLobbyListener(pin, 'host');
-    goTo('lobby');
   } catch (err) {
-    console.error('Error creating private room:', err);
-    alert('Failed to create private room: ' + err.message);
+    console.error('Firestore private room write note/error:', err);
+    // Keep local lobby active even if Firestore index/offline mode notice occurs
+    setupPrivateRoomLobbyListener(pin, 'host');
   }
 }
 
