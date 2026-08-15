@@ -2054,21 +2054,48 @@ function generateRandomPin(){
 }
 
 async function hostPrivateRoom(){
+  // Show loading screen while generating code and creating room
+  const statusEl = document.getElementById('loadingStatus');
+  const fillEl = document.getElementById('loadingFill');
+  if (statusEl) statusEl.textContent = 'Generating room code…';
+  if (fillEl) fillEl.style.width = '40%';
+  goTo('loading');
+
   const user = await ensureUserAuthenticated();
   if (!user) {
     alert('Failed to authenticate user. Please try signing in again.');
+    goTo('duration');
     return;
   }
+  if (fillEl) fillEl.style.width = '75%';
+
   const myUid = user.uid;
   const myName = user.isAnonymous ? 'Guest' : (user.displayName || 'Player');
   const myExercise = currentExercise || 'pushup';
   const myDuration = selectedMatchDuration || 60;
 
-  // Generate 4-digit PIN instantly
+  // Generate 4-digit PIN code
   const pin = generateRandomPin();
   activeRoomPin = pin;
 
-  // Populate lobby UI immediately for fast response
+  const roomData = {
+    pin: pin,
+    exercise: myExercise,
+    duration: myDuration,
+    status: 'waiting', // waiting, ready, active
+    host: { uid: myUid, displayName: myName, ready: true },
+    guest: null,
+    matchId: null,
+    createdAt: Date.now()
+  };
+
+  // Asynchronously save to Firestore without blocking UI transition
+  const roomRef = doc(db, 'private_rooms', pin);
+  setDoc(roomRef, roomData).catch(err => console.error('Firestore private room write note/error:', err));
+
+  if (fillEl) fillEl.style.width = '100%';
+
+  // Populate lobby UI with generated room PIN
   const exName = (EXERCISES[myExercise] ? EXERCISES[myExercise].name : myExercise).toUpperCase();
   document.getElementById('lobbyPinDisplay').textContent = pin;
   document.getElementById('lobbySettingsBar').textContent = `EXERCISE: ${exName} • DURATION: ${myDuration}S`;
@@ -2088,29 +2115,12 @@ async function hostPrivateRoom(){
   startBtn.style.display = 'none';
   msgBanner.textContent = 'Share PIN ' + pin + ' with your rival!';
 
-  // Immediately navigate to lobby screen
-  goTo('lobby');
+  setupPrivateRoomLobbyListener(pin, 'host');
 
-  const roomData = {
-    pin: pin,
-    exercise: myExercise,
-    duration: myDuration,
-    status: 'waiting', // waiting, ready, active
-    host: { uid: myUid, displayName: myName, ready: true },
-    guest: null,
-    matchId: null,
-    createdAt: Date.now()
-  };
-
-  try {
-    const roomRef = doc(db, 'private_rooms', pin);
-    await setDoc(roomRef, roomData);
-    setupPrivateRoomLobbyListener(pin, 'host');
-  } catch (err) {
-    console.error('Firestore private room write note/error:', err);
-    // Keep local lobby active even if Firestore index/offline mode notice occurs
-    setupPrivateRoomLobbyListener(pin, 'host');
-  }
+  // Smooth transition after showing code generation progress
+  setTimeout(() => {
+    goTo('lobby');
+  }, 400);
 }
 
 async function joinPrivateRoomByPin(pin){
