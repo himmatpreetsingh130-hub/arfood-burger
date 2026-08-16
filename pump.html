@@ -647,12 +647,12 @@
   <!-- ================= DURATION SELECT ================= -->
   <div class="screen" id="screen-duration" style="padding:24px 20px;">
     <div class="map-topbar">
-      <div class="back-btn" onclick="goTo('home')">←</div>
+      <div class="back-btn" onclick="goTo('exercise-select')">←</div>
       <div class="map-title">SELECT DURATION</div>
       <div style="width:32px"></div>
     </div>
     <div class="duration-stack">
-      <div class="duration-card" data-duration="60" onclick="selectDuration(60)">
+      <div class="duration-card selected" data-duration="60" onclick="selectDuration(60)">
         <div class="duration-time">60 SEC</div>
         <div class="duration-desc">Quick sprint. High-intensity burst.</div>
       </div>
@@ -665,7 +665,7 @@
         <div class="duration-desc">Ultimate test. Total body burn.</div>
       </div>
     </div>
-    <div class="btn primary" style="margin-top:24px;" onclick="openMatchModeModal()">START BATTLE</div>
+    <div class="btn primary" id="durationStartBtn" style="margin-top:24px;" onclick="startMatchmaking()">START BATTLE</div>
   </div>
 
   <!-- ================= MATCH MODE SELECTION MODAL ================= -->
@@ -677,9 +677,9 @@
       </div>
       <div style="font-size:12px; color:var(--steel); margin-bottom:20px;">Choose how you want to challenge your rival</div>
       <div style="display:flex; flex-direction:column; gap:12px;">
-        <div class="btn-pill" style="font-size:15px; padding:15px;" onclick="selectMatchMode('public')">🌐 PUBLIC MATCHMAKING</div>
-        <div class="btn-pill btn-pill-yellow" style="font-size:15px; padding:15px;" onclick="selectMatchMode('host_private')">👑 HOST PRIVATE ROOM</div>
-        <div class="btn-pill" style="font-size:15px; padding:15px; background:linear-gradient(180deg,#e4e2d8,#8c92a4); color:#070d18; border-color:#8c92a4;" onclick="selectMatchMode('join_private')">🔐 JOIN PRIVATE ROOM</div>
+        <div class="btn-pill" style="font-size:15px; padding:15px;" onclick="selectMatchMode('public')">🌐 RANDOM MATCHMAKING</div>
+        <div class="btn-pill btn-pill-yellow" style="font-size:15px; padding:15px;" onclick="selectMatchMode('host_private')">👑 CREATE ROOM</div>
+        <div class="btn-pill" style="font-size:15px; padding:15px; background:linear-gradient(180deg,#e4e2d8,#8c92a4); color:#070d18; border-color:#8c92a4;" onclick="selectMatchMode('join_private')">🔐 JOIN ROOM</div>
       </div>
     </div>
   </div>
@@ -1193,7 +1193,7 @@ function renderHomeSignedIn(user){
     </div>`;
   document.getElementById('homeStack').innerHTML = `
     <div class="btn-pill" onclick="goToExerciseSelect('level')">LEVEL MODE</div>
-    <div class="btn-pill" onclick="goToExerciseSelect('online')">ONLINE MATCH</div>
+    <div class="btn-pill" onclick="openMatchModeModal()">ONLINE MATCH</div>
     <div class="btn-pill btn-pill-yellow" onclick="goTo('leaderboard')">LEADERBOARD</div>
     <div class="active-users-badge"><span class="active-dot"></span>Online Players: <span id="activeUsersCount">…</span></div>
     <div class="mini-links">
@@ -1256,10 +1256,13 @@ onAuthStateChanged(auth, async (user) => {
 
 // ============ LEVEL MAP ============
 let exerciseSelectMode = 'level';
+let onlineMatchMode = 'public'; // 'public' | 'host_private'
+
 window.goToExerciseSelect = function(mode){
   exerciseSelectMode = mode; // set inside the module so renderExerciseSelect actually sees the change
   goTo('exercise-select');
 };
+
 function renderExerciseSelect(){
   const gridEl = document.getElementById('exerciseGrid');
   gridEl.innerHTML = Object.values(EXERCISES).map(ex => {
@@ -1280,9 +1283,25 @@ function renderExerciseSelect(){
     card.addEventListener('click', () => {
       currentExercise = exId;
       LEVELS = EXERCISES[exId].levels;
-      goTo(exerciseSelectMode === 'online' ? 'duration' : 'map');
+      if (exerciseSelectMode === 'online') {
+        renderDurationScreen();
+        goTo('duration');
+      } else {
+        goTo('map');
+      }
     });
   });
+}
+
+function renderDurationScreen(){
+  const btn = document.getElementById('durationStartBtn');
+  if (onlineMatchMode === 'host_private') {
+    btn.textContent = 'CREATE PRIVATE ROOM';
+    btn.onclick = () => hostPrivateRoom();
+  } else {
+    btn.textContent = 'START BATTLE';
+    btn.onclick = () => startMatchmaking();
+  }
 }
 
 function renderLevelMap(){
@@ -1986,10 +2005,9 @@ window.closeMatchModeModal = function(){
 
 window.selectMatchMode = function(mode){
   closeMatchModeModal();
-  if (mode === 'public') {
-    startMatchmaking();
-  } else if (mode === 'host_private') {
-    hostPrivateRoom();
+  onlineMatchMode = mode;
+  if (mode === 'public' || mode === 'host_private') {
+    goToExerciseSelect('online');
   } else if (mode === 'join_private') {
     openPinPadModal();
   }
